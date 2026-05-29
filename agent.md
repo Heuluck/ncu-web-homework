@@ -6,7 +6,7 @@
 - **架构**：MVC 分层（Controller → Service → Mapper）
 
 ## Git 规范
-- **分支命名**：`feature/<模块名>-<功能描述>`（如 `feature/user-auth`、`feature/chat-private`）
+- **分支命名**：`feat|fix|refactor/<功能描述>`（如 `feature/user-auth`、`feature/chat-private`）
 - **提交格式**：`feat: xxx` / `fix: xxx` / `docs: xxx`
 - **合并流程**：feature → main（需 Code Review）
 

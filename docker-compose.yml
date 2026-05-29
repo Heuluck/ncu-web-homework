@@ -1,0 +1,28 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: chat-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: chat_system
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./db/migration:/docker-entrypoint-initdb.d
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+
+  app:
+    build: .
+    container_name: chat-app
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./application.yml:/app/config/application.yml
+      - uploads:/app/uploads
+    depends_on:
+      - mysql
+
+volumes:
+  mysql-data:
+  uploads:

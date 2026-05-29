@@ -1,0 +1,180 @@
+/* ============================================
+   Open Design - Components
+   Buttons, Inputs, Cards, Badges
+   ============================================ */
+
+/* === Buttons === */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-6);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  border-radius: var(--radius-full); /* Pill shaped buttons */
+  border: 1px solid transparent;
+  transition: all var(--transition-fast);
+  height: 48px; /* Taller buttons */
+  white-space: nowrap;
+}
+
+.btn-primary {
+  background-color: var(--color-primary);
+  color: var(--text-inverse);
+  box-shadow: var(--shadow-sm);
+}
+.btn-primary:hover {
+  background-color: var(--color-primary-hover);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+  text-decoration: none;
+}
+.btn-primary:active {
+  transform: translateY(0);
+}
+.btn-primary:focus-visible {
+  outline: 2px solid var(--border-subtle);
+  outline-offset: 4px;
+}
+
+.btn-secondary {
+  background-color: var(--bg-app);
+  color: var(--text-main);
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-sm);
+}
+.btn-secondary:hover {
+  background-color: var(--bg-surface);
+  text-decoration: none;
+}
+
+.btn-ghost {
+  background-color: transparent;
+  color: var(--text-muted);
+}
+.btn-ghost:hover {
+  background-color: var(--bg-surface);
+  color: var(--text-main);
+  text-decoration: none;
+}
+
+.btn-icon {
+  padding: var(--space-2);
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-full);
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+}
+.btn-icon:hover {
+  background-color: var(--bg-surface-hover);
+  color: var(--text-main);
+}
+
+/* === Inputs === */
+.input-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.input-label {
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  color: var(--text-main);
+  padding-left: var(--space-2);
+}
+
+.input-control {
+  width: 100%;
+  height: 48px; /* Taller inputs */
+  padding: 0 var(--space-4);
+  font-size: var(--text-base);
+  font-weight: var(--font-normal);
+  color: var(--text-main);
+  background-color: var(--bg-surface);
+  border: 1px solid transparent; /* Remove border, rely on background */
+  border-radius: var(--radius-xl);
+  transition: all var(--transition-smooth);
+}
+.input-control::placeholder {
+  color: var(--slate-400);
+}
+.input-control:hover {
+  background-color: var(--bg-surface-hover);
+}
+.input-control:focus {
+  outline: none;
+  background-color: var(--bg-app);
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-sm);
+}
+
+/* === Avatars === */
+.avatar {
+  border-radius: var(--radius-full);
+  object-fit: cover;
+  flex-shrink: 0;
+  background-color: var(--slate-100);
+}
+.avatar-sm { width: 36px; height: 36px; }
+.avatar-md { width: 44px; height: 44px; }
+.avatar-lg { width: 56px; height: 56px; }
+
+.avatar-wrapper {
+  position: relative;
+  display: inline-block;
+}
+.status-indicator {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  width: 12px;
+  height: 12px;
+  border-radius: var(--radius-full);
+  border: 2px solid var(--bg-app);
+  background-color: var(--slate-300); /* default offline */
+}
+.status-indicator.online { background-color: var(--color-success); }
+.status-indicator.busy { background-color: var(--color-warning); }
+.status-indicator.dnd { background-color: var(--color-danger); }
+
+/* === Badges === */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 var(--space-2);
+  height: 22px;
+  font-size: 12px;
+  font-weight: var(--font-semibold);
+  border-radius: var(--radius-full);
+  background-color: var(--text-main);
+  color: white;
+}
+.badge-muted {
+  background-color: var(--slate-100);
+  color: var(--slate-600);
+}
+
+/* === Cards === */
+.card {
+  background-color: var(--bg-app);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-2xl); /* Very round cards */
+  box-shadow: var(--shadow-lg); /* Deeper shadow */
+  overflow: hidden;
+}
+
+/* === Utils === */
+.text-truncate {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

@@ -1,0 +1,39 @@
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.settings/
+.classpath
+.project
+.factorypath
+
+# Build
+backend/target/
+*.class
+*.jar
+*.war
+
+# Logs
+*.log
+logs/
+
+# Uploads
+backend/uploads/
+
+# Node
+node_modules/
+
+# Agent config (local)
+.ttadk/
+ai-plugin.json
+
+# Env
+.env
+.env.local
+.env.*.local
+*.swp
+*.bak

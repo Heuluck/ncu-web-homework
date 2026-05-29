@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>注册 - 在线聊天系统</title>
+  <link rel="stylesheet" href="/css/variables.css">
+  <link rel="stylesheet" href="/css/components.css">
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+  <div class="auth-layout">
+    <div class="auth-container">
+      <div class="auth-header">
+        <div class="auth-header-logo">
+          <i data-lucide="message-square-more"></i>
+        </div>
+        <h1 class="auth-header-title">创建账号</h1>
+        <p class="auth-header-subtitle">加入我们的聊天系统</p>
+      </div>
+
+      <div class="card auth-card">
+        <div id="errorMsg" class="alert alert-error" style="display: none;"></div>
+        <form class="auth-form" id="registerForm">
+          <div class="input-group">
+            <label class="input-label" for="username">用户名</label>
+            <input type="text" id="username" class="input-control" placeholder="3-20个字符" required>
+          </div>
+          
+          <div class="input-group">
+            <label class="input-label" for="nickname">昵称</label>
+            <input type="text" id="nickname" class="input-control" placeholder="您希望如何被称呼？" required>
+          </div>
+
+          <div class="input-group">
+            <label class="input-label" for="password">密码</label>
+            <input type="password" id="password" class="input-control" placeholder="至少6位，包含字母和数字" required>
+          </div>
+
+          <div class="input-group">
+            <label class="input-label" for="confirmPassword">确认密码</label>
+            <input type="password" id="confirmPassword" class="input-control" placeholder="再次输入密码" required>
+          </div>
+          
+          <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 8px;">
+            注册并登录
+          </button>
+        </form>
+      </div>
+
+      <div class="auth-footer">
+        已有账号？ <a href="/login.html">返回登录</a>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/auth.js"></script>
+  <script>
+    lucide.createIcons();
+
+    // 已登录则跳转
+    if (Auth.isLoggedIn()) {
+      window.location.href = '/index.html';
+    }
+
+    document.getElementById('registerForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const username = document.getElementById('username').value;
+      const nickname = document.getElementById('nickname').value;
+      const password = document.getElementById('password').value;
+      const confirmPassword = document.getElementById('confirmPassword').value;
+      const errorMsg = document.getElementById('errorMsg');
+      const submitBtn = e.target.querySelector('button[type="submit"]');
+      
+      errorMsg.style.display = 'none';
+      
+      // 前端校验
+      if (password !== confirmPassword) {
+        errorMsg.textContent = '两次密码不一致';
+        errorMsg.style.display = 'block';
+        return;
+      }
+      
+      submitBtn.disabled = true;
+      submitBtn.textContent = '注册中...';
+      
+      const result = await API.post('/api/auth/register', { 
+        username, 
+        nickname, 
+        password, 
+        confirmPassword 
+      });
+      
+      if (result && result.code === 200) {
+        Auth.setToken(result.data.token);
+        Auth.setUser(result.data.user);
+        window.location.href = '/index.html';
+      } else {
+        errorMsg.textContent = result?.message || '注册失败';
+        errorMsg.style.display = 'block';
+        submitBtn.disabled = false;
+        submitBtn.textContent = '注册并登录';
+      }
+    });
+  </script>
+</body>
+</html>

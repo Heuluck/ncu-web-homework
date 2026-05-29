@@ -32,3 +32,9 @@ db/               — 数据库迁移脚本
 - 前端放在 `backend/src/main/resources/static/`，同域部署
 - 统一响应格式：`{ code, message, data }`
 - 认证方式：JWT Token（Header: `Authorization: Bearer <token>`）
+
+## 相关文档
+- **PRD**：`docs/PRD-在线聊天系统.md`
+- **分工方案**：`docs/分工方案.md`
+- **技术方案**：`docs/技术方案.md`
+- **实施计划**：`docs/superpowers/plans/`

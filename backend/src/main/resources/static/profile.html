@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>个人资料 - 在线聊天系统</title>
+  <link rel="stylesheet" href="/css/variables.css">
+  <link rel="stylesheet" href="/css/components.css">
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+  <div class="profile-page">
+    <div class="profile-header">
+      <a href="/index.html" class="btn btn-ghost">
+        <i data-lucide="arrow-left" style="width: 16px; height: 16px;"></i>
+        返回
+      </a>
+      <h1>个人资料</h1>
+      <div style="width: 80px;"></div>
+    </div>
+
+    <div class="card profile-card">
+      <div class="profile-avatar-section">
+        <div class="profile-avatar-wrapper" onclick="document.getElementById('avatarInput').click()">
+          <img id="avatarPreview" src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix" alt="头像" class="avatar avatar-xl">
+          <div class="profile-avatar-overlay">
+            <i data-lucide="camera" style="width: 24px; height: 24px;"></i>
+          </div>
+        </div>
+        <input type="file" id="avatarInput" accept="image/*" style="display: none;" onchange="uploadAvatar(this)">
+        <span class="text-muted text-sm">点击更换头像</span>
+      </div>
+
+      <div id="successMsg" class="alert alert-success" style="display: none;"></div>
+      <div id="errorMsg" class="alert alert-error" style="display: none;"></div>
+
+      <form id="profileForm" class="profile-form">
+        <div class="input-group">
+          <label class="input-label">用户名</label>
+          <input type="text" id="username" class="input-control" disabled>
+        </div>
+
+        <div class="input-group">
+          <label class="input-label">昵称</label>
+          <input type="text" id="nickname" class="input-control" placeholder="设置昵称">
+        </div>
+
+        <div class="input-group">
+          <label class="input-label">个性签名</label>
+          <input type="text" id="signature" class="input-control" placeholder="写点什么...">
+        </div>
+
+        <div class="input-group">
+          <label class="input-label">在线状态</label>
+          <select id="status" class="input-control">
+            <option value="1">在线</option>
+            <option value="2">忙碌</option>
+            <option value="3">勿扰</option>
+            <option value="0">离线</option>
+          </select>
+        </div>
+
+        <button type="submit" class="btn btn-primary">保存修改</button>
+      </form>
+
+      <div class="profile-section">
+        <h3 class="profile-section-title">修改密码</h3>
+        <div id="passwordMsg" class="alert" style="display: none;"></div>
+        <form id="passwordForm" class="profile-form">
+          <div class="input-group">
+            <label class="input-label">原密码</label>
+            <input type="password" id="oldPassword" class="input-control" placeholder="输入原密码" required>
+          </div>
+
+          <div class="input-group">
+            <label class="input-label">新密码</label>
+            <input type="password" id="newPassword" class="input-control" placeholder="至少6位，包含字母和数字" required>
+          </div>
+
+          <button type="submit" class="btn btn-secondary">修改密码</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/auth.js"></script>
+  <script src="/js/utils.js"></script>
+  <script>
+    if (!Auth.checkAuth()) location.href = '/login.html';
+    
+    let currentAvatar = '';
+    
+    // 加载个人信息
+    async function loadProfile() {
+      const result = await API.get('/api/user/profile');
+      if (result && result.code === 200) {
+        const user = result.data;
+        document.getElementById('username').value = user.username;
+        document.getElementById('nickname').value = user.nickname || '';
+        document.getElementById('signature').value = user.signature || '';
+        document.getElementById('status').value = user.status;
+        if (user.avatar) {
+          document.getElementById('avatarPreview').src = user.avatar;
+          currentAvatar = user.avatar;
+        }
+      }
+    }
+    
+    // 上传头像
+    async function uploadAvatar(input) {
+      const file = input.files[0];
+      if (!file) return;
+      
+      const result = await API.upload(file);
+      if (result && result.code === 200) {
+        currentAvatar = result.data.url;
+        document.getElementById('avatarPreview').src = currentAvatar;
+      }
+    }
+    
+    // 保存资料
+    document.getElementById('profileForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const result = await API.put('/api/user/profile', {
+        nickname: document.getElementById('nickname').value,
+        signature: document.getElementById('signature').value,
+        avatar: currentAvatar,
+        status: parseInt(document.getElementById('status').value)
+      });
+      
+      if (result && result.code === 200) {
+        Auth.setUser(result.data);
+        showAlert('successMsg', '保存成功', 'success');
+      } else {
+        showAlert('errorMsg', result?.message || '保存失败', 'error');
+      }
+    });
+    
+    // 修改密码
+    document.getElementById('passwordForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const oldPassword = document.getElementById('oldPassword').value;
+      const newPassword = document.getElementById('newPassword').value;
+      
+      const result = await API.put('/api/user/password', { oldPassword, newPassword });
+      
+      if (result && result.code === 200) {
+        showAlert('passwordMsg', '密码修改成功', 'success');
+        document.getElementById('oldPassword').value = '';
+        document.getElementById('newPassword').value = '';
+      } else {
+        showAlert('passwordMsg', result?.message || '修改失败', 'error');
+      }
+    });
+    
+    // 显示提示
+    function showAlert(id, message, type) {
+      const el = document.getElementById(id);
+      el.textContent = message;
+      el.className = `alert alert-${type}`;
+      el.style.display = 'block';
+      setTimeout(() => el.style.display = 'none', 3000);
+    }
+    
+    lucide.createIcons();
+    loadProfile();
+  </script>
+</body>
+</html>

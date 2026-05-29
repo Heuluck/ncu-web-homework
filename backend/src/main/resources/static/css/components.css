@@ -9,13 +9,13 @@
   align-items: center;
   justify-content: center;
   gap: var(--space-2);
-  padding: var(--space-2) var(--space-5);
+  padding: var(--space-3) var(--space-6);
   font-size: var(--text-sm);
   font-weight: var(--font-medium);
   border-radius: var(--radius-full); /* Pill shaped buttons */
   border: 1px solid transparent;
   transition: all var(--transition-fast);
-  height: 44px; /* Taller buttons */
+  height: 48px; /* Taller buttons */
   white-space: nowrap;
 }
 
@@ -81,14 +81,14 @@
 .input-group {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: var(--space-4);
 }
 
 .input-label {
   font-size: var(--text-sm);
   font-weight: var(--font-medium);
   color: var(--text-main);
-  padding-left: var(--space-1);
+  padding-left: var(--space-2);
 }
 
 .input-control {

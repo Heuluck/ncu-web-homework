@@ -15,16 +15,17 @@
     <aside class="app-sidebar">
       <!-- 用户信息头部 -->
       <div class="sidebar-header">
-        <div class="sidebar-profile">
+        <div class="sidebar-profile" onclick="toggleProfileDropdown(this, event)">
           <div class="avatar-wrapper">
             <img id="myAvatar" src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix" alt="头像" class="avatar avatar-sm">
             <span id="myStatus" class="status-indicator online"></span>
           </div>
           <div class="sidebar-profile-info">
             <span id="myName" class="sidebar-profile-name">用户名</span>
+            <span id="mySignature" class="sidebar-profile-signature"></span>
           </div>
           <div class="dropdown">
-            <button class="btn-icon" onclick="toggleDropdown(this)">
+            <button class="btn-icon" onclick="toggleDropdown(this, event)">
               <i data-lucide="chevron-down" style="width: 16px; height: 16px;"></i>
             </button>
             <div class="dropdown-menu">
@@ -40,9 +41,6 @@
             </div>
           </div>
         </div>
-        <button class="btn-icon" title="新建聊天">
-          <i data-lucide="edit"></i>
-        </button>
       </div>
 
       <!-- 搜索栏 -->
@@ -151,8 +149,19 @@
     // 初始化
     const user = Auth.getUser();
     document.getElementById('myName').textContent = user?.nickname || user?.username || '用户';
+    if (user?.signature) {
+      document.getElementById('mySignature').textContent = user.signature;
+    }
     if (user?.avatar) {
       document.getElementById('myAvatar').src = user.avatar;
+    }
+    // Update status indicator
+    const statusDot = document.getElementById('myStatus');
+    if (statusDot && user?.status !== undefined) {
+      statusDot.className = 'status-indicator';
+      if (user.status === 1) statusDot.classList.add('online');
+      else if (user.status === 2) statusDot.classList.add('busy');
+      else if (user.status === 3) statusDot.classList.add('dnd');
     }
     
     lucide.createIcons();
@@ -170,14 +179,24 @@
     });
 
     // 下拉菜单
-    function toggleDropdown(btn) {
-      const dropdown = btn.closest('.dropdown');
-      dropdown.classList.toggle('active');
-    }
-    document.addEventListener('click', (e) => {
-      if (!e.target.closest('.dropdown')) {
-        document.querySelectorAll('.dropdown').forEach(d => d.classList.remove('active'));
+    function toggleProfileDropdown(el, event) {
+      event.stopPropagation();
+      const dropdown = el.querySelector('.dropdown');
+      if (dropdown) {
+        // 先关闭其他可能开启的下拉菜单
+        document.querySelectorAll('.dropdown').forEach(d => {
+          if (d !== dropdown) d.classList.remove('active');
+        });
+        dropdown.classList.toggle('active');
       }
+    }
+    function toggleDropdown(btn, event) {
+      event.stopPropagation();
+      const dropdown = btn.closest('.dropdown');
+      if (dropdown) dropdown.classList.toggle('active');
+    }
+    document.addEventListener('click', () => {
+      document.querySelectorAll('.dropdown').forEach(d => d.classList.remove('active'));
     });
 
     // WebSocket 连接

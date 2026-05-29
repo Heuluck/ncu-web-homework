@@ -55,6 +55,7 @@ db/               — 数据库迁移脚本
 2️⃣  计划阶段 → writing-plans
    ├─ 拆解为可执行的 Task
    ├─ 每个 Task 包含具体代码和步骤
+   ├─ 计划末尾生成完整的端到端测试用例（API + 前端 E2E）
    └─ 输出实施计划 → docs/superpowers/plans/
 
 3️⃣  执行阶段 → subagent-driven-development（推荐）
@@ -64,7 +65,8 @@ db/               — 数据库迁移脚本
 
 4️⃣  验证阶段 → verification-before-completion
    ├─ 检查是否符合原始需求
-   ├─ 测试关键功能
+   ├─ API 测试（curl 验证所有接口）
+   ├─ 前端 E2E 测试（推荐 agent-browser）
    └─ 确认无遗漏
 
 5️⃣  收尾阶段 → finishing-a-development-branch
@@ -118,9 +120,9 @@ db/               — 数据库迁移脚本
    </html>
    ```
 
-5. **参考预览页面**
-   - `preview.html` 展示了完整的 UI 风格和组件用法
-   - 新开发页面应保持一致的视觉风格
+5. **原型参考**
+   - `preview.html` 是完整的 UI 原型，新开发页面可以参考其风格和组件用法
+   - 所有新页面的 CSS 类名、布局结构、交互模式以 preview.html 为准
 
 ## 测试与验收规范
 
@@ -134,8 +136,25 @@ db/               — 数据库迁移脚本
 ### 自测流程
 1. **启动应用**：确保 `mvn spring-boot:run` 能正常启动
 2. **API 测试**：用 Postman 或 curl 测试所有接口
-3. **前端测试**：浏览器打开页面，检查功能和样式
+3. **前端 E2E 测试**：使用 agent-browser 自动化测试（推荐）
 4. **异常测试**：测试错误输入、未登录、权限不足等场景
+
+### Agent-Browser 端到端测试（推荐）
+
+前端功能开发完成后，推荐用 agent-browser 做端到端验证。
+
+**标准流程：**
+1. 打开页面：`agent-browser open http://localhost:8080/xxx.html`
+2. 查看结构：`agent-browser snapshot -i`（获取元素 ref）
+3. 截图验证：`agent-browser screenshot /tmp/xx.png`
+4. 交互操作：`agent-browser fill @e2 "内容"` / `agent-browser click @e4`
+5. 验证结果：`agent-browser get url` 或重新 `snapshot`
+6. 关闭：`agent-browser close`
+
+**注意事项：**
+- 每次页面变化后必须重新 `snapshot` 获取最新 ref
+- 截图保存到 `/tmp/` 目录便于查看
+- 环境：`export PATH="$HOME/.nvm/versions/node/v24.14.1/bin:$PATH"`
 
 ### Agent 使用约束
 使用 Agent 开发时，**必须**在 prompt 中强调：

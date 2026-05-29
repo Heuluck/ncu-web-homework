@@ -35,3 +35,5 @@ ai-plugin.json
 .env
 .env.local
 .env.*.local
+*.swp
+*.bak

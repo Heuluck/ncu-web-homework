@@ -75,7 +75,7 @@ backend/
 - Create: `backend/src/main/resources/application.yml`
 - Create: `backend/src/main/java/com/ncu/chat/ChatApplication.java`
 
-- [ ] **Step 1: 创建 pom.xml**
+- [x] **Step 1: 创建 pom.xml**
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
@@ -168,7 +168,7 @@ backend/
 </project>
 ```
 
-- [ ] **Step 2: 创建 application.yml**
+- [x] **Step 2: 创建 application.yml**
 
 ```yaml
 server:
@@ -207,7 +207,7 @@ file:
     allowed-types: jpg,jpeg,png,gif,pdf,doc,docx,txt,mp3,wav
 ```
 
-- [ ] **Step 3: 创建主启动类**
+- [x] **Step 3: 创建主启动类**
 
 ```java
 package com.ncu.chat;
@@ -225,7 +225,7 @@ public class ChatApplication {
 }
 ```
 
-- [ ] **Step 4: 创建目录结构**
+- [x] **Step 4: 创建目录结构**
 
 ```bash
 mkdir -p backend/src/main/java/com/ncu/chat/{common,config,util,interceptor,model/entity,model/dto,mapper,service/impl,controller}
@@ -233,7 +233,7 @@ mkdir -p backend/src/main/resources/{static/{css,js,assets},templates}
 mkdir -p backend/src/test/java/com/ncu/chat
 ```
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/
@@ -249,7 +249,7 @@ git commit -m "feat: 初始化 Spring Boot 项目结构和配置"
 - Create: `backend/src/main/java/com/ncu/chat/common/PageResult.java`
 - Create: `backend/src/main/java/com/ncu/chat/common/GlobalExceptionHandler.java`
 
-- [ ] **Step 1: 创建统一响应封装 Result.java**
+- [x] **Step 1: 创建统一响应封装 Result.java**
 
 ```java
 package com.ncu.chat.common;
@@ -292,7 +292,7 @@ public class Result<T> {
 }
 ```
 
-- [ ] **Step 2: 创建分页结果 PageResult.java**
+- [x] **Step 2: 创建分页结果 PageResult.java**
 
 ```java
 package com.ncu.chat.common;
@@ -316,7 +316,7 @@ public class PageResult<T> {
 }
 ```
 
-- [ ] **Step 3: 创建全局异常处理器 GlobalExceptionHandler.java**
+- [x] **Step 3: 创建全局异常处理器 GlobalExceptionHandler.java**
 
 ```java
 package com.ncu.chat.common;
@@ -363,7 +363,7 @@ public class GlobalExceptionHandler {
 }
 ```
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add backend/src/main/java/com/ncu/chat/common/
@@ -379,7 +379,7 @@ git commit -m "feat: 添加统一响应封装和全局异常处理"
 - Create: `backend/src/main/java/com/ncu/chat/config/WebMvcConfig.java`
 - Create: `backend/src/main/java/com/ncu/chat/config/WebSocketConfig.java`
 
-- [ ] **Step 1: 创建 MyBatisPlusConfig.java**
+- [x] **Step 1: 创建 MyBatisPlusConfig.java**
 
 ```java
 package com.ncu.chat.config;
@@ -422,7 +422,7 @@ public class MyBatisPlusConfig {
 }
 ```
 
-- [ ] **Step 2: 创建 WebMvcConfig.java**
+- [x] **Step 2: 创建 WebMvcConfig.java**
 
 ```java
 package com.ncu.chat.config;
@@ -470,7 +470,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
 }
 ```
 
-- [ ] **Step 3: 创建 WebSocketConfig.java**
+- [x] **Step 3: 创建 WebSocketConfig.java**
 
 ```java
 package com.ncu.chat.config;
@@ -501,7 +501,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 }
 ```
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add backend/src/main/java/com/ncu/chat/config/
@@ -516,7 +516,7 @@ git commit -m "feat: 添加 MyBatis-Plus、MVC、WebSocket 配置"
 - Create: `backend/src/main/java/com/ncu/chat/util/JwtUtil.java`
 - Create: `backend/src/main/java/com/ncu/chat/interceptor/AuthInterceptor.java`
 
-- [ ] **Step 1: 创建 JwtUtil.java**
+- [x] **Step 1: 创建 JwtUtil.java**
 
 ```java
 package com.ncu.chat.util;
@@ -591,7 +591,7 @@ public class JwtUtil {
 }
 ```
 
-- [ ] **Step 2: 创建 AuthInterceptor.java**
+- [x] **Step 2: 创建 AuthInterceptor.java**
 
 ```java
 package com.ncu.chat.interceptor;
@@ -638,7 +638,7 @@ public class AuthInterceptor implements HandlerInterceptor {
 }
 ```
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add backend/src/main/java/com/ncu/chat/util/ backend/src/main/java/com/ncu/chat/interceptor/
@@ -653,7 +653,7 @@ git commit -m "feat: 添加 JWT 工具类和认证拦截器"
 - Create: `backend/src/main/java/com/ncu/chat/model/entity/User.java`
 - Create: `backend/src/main/java/com/ncu/chat/mapper/UserMapper.java`
 
-- [ ] **Step 1: 创建 User 实体**
+- [x] **Step 1: 创建 User 实体**
 
 ```java
 package com.ncu.chat.model.entity;
@@ -685,7 +685,7 @@ public class User {
 }
 ```
 
-- [ ] **Step 2: 创建 UserMapper**
+- [x] **Step 2: 创建 UserMapper**
 
 ```java
 package com.ncu.chat.mapper;
@@ -699,7 +699,7 @@ public interface UserMapper extends BaseMapper<User> {
 }
 ```
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add backend/src/main/java/com/ncu/chat/model/ backend/src/main/java/com/ncu/chat/mapper/
@@ -715,7 +715,7 @@ git commit -m "feat: 添加 User 实体和 Mapper"
 - Create: `backend/src/main/java/com/ncu/chat/model/dto/UserLoginDTO.java`
 - Create: `backend/src/main/java/com/ncu/chat/model/dto/UserProfileDTO.java`
 
-- [ ] **Step 1: 创建 UserRegisterDTO**
+- [x] **Step 1: 创建 UserRegisterDTO**
 
 ```java
 package com.ncu.chat.model.dto;
@@ -746,7 +746,7 @@ public class UserRegisterDTO {
 }
 ```
 
-- [ ] **Step 2: 创建 UserLoginDTO**
+- [x] **Step 2: 创建 UserLoginDTO**
 
 ```java
 package com.ncu.chat.model.dto;
@@ -764,7 +764,7 @@ public class UserLoginDTO {
 }
 ```
 
-- [ ] **Step 3: 创建 UserProfileDTO**
+- [x] **Step 3: 创建 UserProfileDTO**
 
 ```java
 package com.ncu.chat.model.dto;
@@ -783,7 +783,7 @@ public class UserProfileDTO {
 }
 ```
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add backend/src/main/java/com/ncu/chat/model/dto/
@@ -798,7 +798,7 @@ git commit -m "feat: 添加用户相关 DTO 类"
 - Create: `backend/src/main/java/com/ncu/chat/service/UserService.java`
 - Create: `backend/src/main/java/com/ncu/chat/service/impl/UserServiceImpl.java`
 
-- [ ] **Step 1: 创建 UserService 接口**
+- [x] **Step 1: 创建 UserService 接口**
 
 ```java
 package com.ncu.chat.service;
@@ -821,7 +821,7 @@ public interface UserService {
 }
 ```
 
-- [ ] **Step 2: 创建 UserServiceImpl**
+- [x] **Step 2: 创建 UserServiceImpl**
 
 ```java
 package com.ncu.chat.service.impl;
@@ -965,7 +965,7 @@ public class UserServiceImpl implements UserService {
 }
 ```
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add backend/src/main/java/com/ncu/chat/service/
@@ -979,7 +979,7 @@ git commit -m "feat: 添加 UserService 接口和实现"
 **Files:**
 - Create: `backend/src/main/java/com/ncu/chat/controller/AuthController.java`
 
-- [ ] **Step 1: 创建 AuthController**
+- [x] **Step 1: 创建 AuthController**
 
 ```java
 package com.ncu.chat.controller;
@@ -1021,7 +1021,7 @@ public class AuthController {
 }
 ```
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add backend/src/main/java/com/ncu/chat/controller/AuthController.java
@@ -1037,7 +1037,7 @@ git commit -m "feat: 添加 AuthController（注册、登录、登出）"
 - Create: `backend/src/main/java/com/ncu/chat/controller/FileController.java`
 - Create: `backend/src/main/java/com/ncu/chat/util/FileUtil.java`
 
-- [ ] **Step 1: 创建 UserController**
+- [x] **Step 1: 创建 UserController**
 
 ```java
 package com.ncu.chat.controller;
@@ -1086,7 +1086,7 @@ public class UserController {
 }
 ```
 
-- [ ] **Step 2: 创建 FileUtil**
+- [x] **Step 2: 创建 FileUtil**
 
 ```java
 package com.ncu.chat.util;
@@ -1138,7 +1138,7 @@ public class FileUtil {
 }
 ```
 
-- [ ] **Step 3: 创建 FileController**
+- [x] **Step 3: 创建 FileController**
 
 ```java
 package com.ncu.chat.controller;
@@ -1170,7 +1170,7 @@ public class FileController {
 }
 ```
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add backend/src/main/java/com/ncu/chat/controller/ backend/src/main/java/com/ncu/chat/util/FileUtil.java
@@ -1196,13 +1196,13 @@ git commit -m "feat: 添加 UserController 和 FileController"
 - Create: `db/migrate.sh`
 - Create: `db/init.sql`
 
-- [ ] **Step 1: 创建 init.sql（建库）**
+- [x] **Step 1: 创建 init.sql（建库）**
 
 ```sql
 CREATE DATABASE IF NOT EXISTS chat_system DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 ```
 
-- [ ] **Step 2: A 创建 user.sql**
+- [x] **Step 2: A 创建 user.sql**
 
 ```sql
 USE chat_system;
@@ -1224,7 +1224,7 @@ CREATE TABLE IF NOT EXISTS `user` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 ```
 
-- [ ] **Step 3: 创建 migrate.sh**
+- [x] **Step 3: 创建 migrate.sh**
 
 ```bash
 #!/bin/bash
@@ -1253,7 +1253,7 @@ done
 echo "=== 迁移完成 ==="
 ```
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 mkdir -p db/migration
@@ -1275,7 +1275,7 @@ git commit -m "feat: 添加数据库迁移脚本和 user 表（其他表由各�
 - Create: `backend/src/main/resources/static/js/utils.js`
 - Create: `backend/src/main/resources/static/js/websocket.js`
 
-- [ ] **Step 1: 创建 style.css（基础样式）**
+- [x] **Step 1: 创建 style.css（基础样式）**
 
 ```css
 * {
@@ -1433,7 +1433,7 @@ body {
 }
 ```
 
-- [ ] **Step 2: 创建 api.js**
+- [x] **Step 2: 创建 api.js**
 
 ```javascript
 const API = {
@@ -1509,7 +1509,7 @@ const API = {
 };
 ```
 
-- [ ] **Step 3: 创建 auth.js**
+- [x] **Step 3: 创建 auth.js**
 
 ```javascript
 const Auth = {
@@ -1550,7 +1550,7 @@ const Auth = {
 };
 ```
 
-- [ ] **Step 4: 创建 utils.js**
+- [x] **Step 4: 创建 utils.js**
 
 ```javascript
 const Utils = {
@@ -1587,7 +1587,7 @@ const Utils = {
 };
 ```
 
-- [ ] **Step 5: 创建 websocket.js**
+- [x] **Step 5: 创建 websocket.js**
 
 ```javascript
 const WS = {
@@ -1667,7 +1667,7 @@ const WS = {
 };
 ```
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add backend/src/main/resources/static/
@@ -1682,7 +1682,7 @@ git commit -m "feat: 添加前端公共 CSS 和 JS（api, auth, utils, websocket
 - Create: `backend/src/main/resources/static/login.html`
 - Create: `backend/src/main/resources/static/register.html`
 
-- [ ] **Step 1: 创建 login.html**
+- [x] **Step 1: 创建 login.html**
 
 ```html
 <!DOCTYPE html>
@@ -1763,7 +1763,7 @@ git commit -m "feat: 添加前端公共 CSS 和 JS（api, auth, utils, websocket
 </html>
 ```
 
-- [ ] **Step 2: 创建 register.html**
+- [x] **Step 2: 创建 register.html**
 
 ```html
 <!DOCTYPE html>
@@ -1856,7 +1856,7 @@ git commit -m "feat: 添加前端公共 CSS 和 JS（api, auth, utils, websocket
 </html>
 ```
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add backend/src/main/resources/static/login.html backend/src/main/resources/static/register.html
@@ -1871,7 +1871,7 @@ git commit -m "feat: 添加登录和注册页面"
 - Create: `backend/src/main/resources/static/index.html`
 - Create: `backend/src/main/resources/static/profile.html`
 
-- [ ] **Step 1: 创建 index.html（主界面骨架）**
+- [x] **Step 1: 创建 index.html（主界面骨架）**
 
 ```html
 <!DOCTYPE html>
@@ -1978,7 +1978,7 @@ git commit -m "feat: 添加登录和注册页面"
 </html>
 ```
 
-- [ ] **Step 2: 创建 profile.html**
+- [x] **Step 2: 创建 profile.html**
 
 ```html
 <!DOCTYPE html>
@@ -2129,7 +2129,7 @@ git commit -m "feat: 添加登录和注册页面"
 </html>
 ```
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add backend/src/main/resources/static/index.html backend/src/main/resources/static/profile.html
@@ -2146,7 +2146,7 @@ git commit -m "feat: 添加主界面骨架和个人资料页面"
 - Create: `backend/deploy.sh`
 - Create: `backend/.dockerignore`
 
-- [ ] **Step 1: 创建 Dockerfile**
+- [x] **Step 1: 创建 Dockerfile**
 
 ```dockerfile
 FROM maven:3.9-eclipse-temurin-17 AS builder
@@ -2164,7 +2164,7 @@ EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "app.jar"]
 ```
 
-- [ ] **Step 2: 创建 docker-compose.yml**
+- [x] **Step 2: 创建 docker-compose.yml**
 
 ```yaml
 version: '3.8'
@@ -2202,7 +2202,7 @@ volumes:
   uploads:
 ```
 
-- [ ] **Step 3: 创建 deploy.sh**
+- [x] **Step 3: 创建 deploy.sh**
 
 ```bash
 #!/bin/bash
@@ -2230,7 +2230,7 @@ echo "  停止服务: docker-compose down"
 echo "  重启服务: docker-compose restart"
 ```
 
-- [ ] **Step 4: 创建 .dockerignore**
+- [x] **Step 4: 创建 .dockerignore**
 
 ```
 target/
@@ -2244,7 +2244,7 @@ target/
 .DS_Store
 ```
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/Dockerfile backend/docker-compose.yml backend/deploy.sh backend/.dockerignore
@@ -2254,11 +2254,101 @@ git commit -m "feat: 添加 Docker 部署配置和脚本"
 
 ---
 
+## 已完成工作
+
+### 后端
+- Task 1-14 全部完成（Spring Boot 项目、公共类、配置、认证、实体、DTO、Service、Controller、文件上传）
+- Bug 修复：登出接口（手动解析 token）、文件上传（Files.copy 替代 file.transferTo）
+- 后端校验：密码修改增加 ChangePasswordDTO 校验（>=6位，字母+数字）、个性签名最长 50 字符
+- 图片自动压缩：超过 500KB 自动缩放+压缩
+
+### 前端
+- 设计系统：variables.css / components.css / style.css（类名全部匹配 HTML）
+- 页面：login.html / register.html / index.html / profile.html / preview.html
+- 公共 JS：api.js / auth.js / utils.js / websocket.js
+- 修复：CDN 引用恢复、状态小点颜色联动、下拉菜单交互、个性签名显示
+
+### 基础设施
+- Docker 部署：Dockerfile + docker-compose.yml（一键启动）
+- 数据库迁移：db/migration/ + migrate.sh + migrate.ps1
+- 配置统一：根目录 application.yml + backend 本地开发配置
+- README.md + AGENTS.md 项目文档
+- PowerShell 脚本（deploy.ps1 / migrate.ps1）
+
 ## 完成检查
 
-- [ ] 所有 API 接口可通过 Postman 测试
-- [ ] 登录注册流程完整可用
-- [ ] JWT 认证拦截器生效
-- [ ] WebSocket 连接建立成功
-- [ ] 前端页面可正常访问和交互
-- [ ] `docker-compose up` 可一键启动
+- [x] 所有 API 接口可通过 Postman 测试
+- [x] 登录注册流程完整可用
+- [x] JWT 认证拦截器生效
+- [x] WebSocket 连接建立成功
+- [x] 前端页面可正常访问和交互
+- [x] `docker-compose up` 可一键启动
+
+---
+
+## Task 15: 端到端测试
+
+**目标：** 验证 Part A 全部功能在 Docker 环境下端到端可用
+
+**前置条件：** `docker compose up -d` 启动成功，`http://localhost:8080` 可访问
+
+### 15.1 认证流程测试
+
+| # | 用例 | 请求 | 预期结果 |
+|---|------|------|----------|
+| 1 | 注册成功 | `POST /api/auth/register` 合法参数 | 200, 返回 token + user |
+| 2 | 注册-用户名重复 | 同一用户名注册两次 | 第二次返回 500, "用户名已存在" |
+| 3 | 注册-密码不一致 | password ≠ confirmPassword | 500, "两次密码不一致" |
+| 4 | 注册-参数校验失败 | 用户名2位/密码5位/缺字段 | 400, 具体校验错误信息 |
+| 5 | 登录成功 | `POST /api/auth/login` 正确凭据 | 200, 返回 token + user |
+| 6 | 登录-用户不存在 | 不存在的用户名 | 500, "用户名不存在" |
+| 7 | 登录-密码错误 | 正确用户名+错误密码 | 500, "密码错误" |
+| 8 | 登录-账号禁用 | 禁用账号登录 | 500, "账号已被禁用" |
+| 9 | 登出 | `POST /api/auth/logout` + token | 200, 用户状态变离线 |
+| 10 | 无 token 访问受保护接口 | `GET /api/user/profile` 无 Authorization | 401 |
+| 11 | 过期 token | 使用过期 JWT 访问 | 401, "Token 无效或已过期" |
+
+### 15.2 用户操作测试
+
+| # | 用例 | 请求 | 预期结果 |
+|---|------|------|----------|
+| 12 | 获取个人资料 | `GET /api/user/profile` + token | 200, 返回用户信息 |
+| 13 | 更新昵称/签名 | `PUT /api/user/profile` + body | 200, 返回更新后信息 |
+| 14 | 修改密码-成功 | `PUT /api/user/password` 旧密码正确 | 200 |
+| 15 | 修改密码-旧密码错误 | `PUT /api/user/password` 旧密码错误 | 500, "原密码错误" |
+| 16 | 修改密码后旧 token 失效 | 改密后用旧 token 访问 | 401（如果实现了 token 失效） |
+| 17 | 切换在线状态 | `PUT /api/user/status` | 200, 状态更新 |
+
+### 15.3 文件上传测试
+
+| # | 用例 | 请求 | 预期结果 |
+|---|------|------|----------|
+| 18 | 上传图片成功 | `POST /api/file/upload` + jpg/png | 200, 返回 url |
+| 19 | 上传非法类型 | `POST /api/file/upload` + .exe | 500, "不支持的文件类型" |
+| 20 | 未登录上传 | 无 token | 401 |
+
+### 15.4 前端页面测试
+
+| # | 用例 | 操作 | 预期结果 |
+|---|------|------|----------|
+| 21 | 登录页渲染 | 浏览器访问 `/login.html` | 页面正常显示，表单元素完整 |
+| 22 | 登录跳转 | 填写正确凭据提交 | 跳转到 `/index.html` |
+| 23 | 注册页渲染 | 访问 `/register.html` | 页面正常显示 |
+| 24 | 注册跳转 | 填写合法信息提交 | 跳转到 `/index.html` |
+| 25 | 个人资料页 | 访问 `/profile.html`（已登录） | 加载用户信息，可编辑保存 |
+| 26 | 主界面骨架 | 访问 `/index.html`（已登录） | 侧边栏、聊天区域正常渲染 |
+| 27 | 未登录重定向 | 未登录访问 `/index.html` | 跳转到 `/login.html` |
+| 28 | WebSocket 连接 | 登录后检查控制台 | "WebSocket 已连接" 日志 |
+
+### 15.5 部署验证
+
+| # | 用例 | 操作 | 预期结果 |
+|---|------|------|----------|
+| 29 | 一键启动 | `docker compose up -d` | 两个容器 running |
+| 30 | 健康检查 | `curl http://localhost:8080/login.html` | 返回 HTML |
+| 31 | MySQL 表创建 | 连接数据库查表 | `user` 表存在 |
+| 32 | 静态资源 | 访问 CSS/JS 文件 | 200, 内容正确 |
+
+### 执行方式
+
+使用 `agent-browser` 自动化前端测试（打开页面、截图、交互），`curl` 验证 API 接口。

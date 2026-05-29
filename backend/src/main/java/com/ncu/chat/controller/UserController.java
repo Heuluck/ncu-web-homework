@@ -1,11 +1,12 @@
 package com.ncu.chat.controller;
 
 import com.ncu.chat.common.Result;
+import com.ncu.chat.model.dto.ChangePasswordDTO;
 import com.ncu.chat.model.dto.UserProfileDTO;
 import com.ncu.chat.service.UserService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
-
 import java.util.Map;
 
 @RestController
@@ -22,16 +23,14 @@ public class UserController {
 
     @PutMapping("/profile")
     public Result<UserProfileDTO> updateProfile(@RequestAttribute("userId") Long userId,
-                                                @RequestBody UserProfileDTO dto) {
+                                                @Valid @RequestBody UserProfileDTO dto) {
         return Result.success(userService.updateProfile(userId, dto));
     }
 
     @PutMapping("/password")
     public Result<?> changePassword(@RequestAttribute("userId") Long userId,
-                                    @RequestBody Map<String, String> params) {
-        String oldPassword = params.get("oldPassword");
-        String newPassword = params.get("newPassword");
-        userService.changePassword(userId, oldPassword, newPassword);
+                                    @Valid @RequestBody ChangePasswordDTO dto) {
+        userService.changePassword(userId, dto.getOldPassword(), dto.getNewPassword());
         return Result.success("密码修改成功", null);
     }
 

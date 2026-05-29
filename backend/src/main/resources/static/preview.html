@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>在线聊天系统 - Open Design</title>
+  <link rel="stylesheet" href="/css/variables.css">
+  <link rel="stylesheet" href="/css/components.css">
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+  <div class="app-layout">
+    <!-- Sidebar -->
+    <aside class="app-sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-profile">
+          <div class="avatar-wrapper">
+            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix" alt="我的头像" class="avatar avatar-sm">
+            <span class="status-indicator online"></span>
+          </div>
+          <div class="sidebar-profile-info">
+            <span class="sidebar-profile-name">Felix</span>
+          </div>
+          <i data-lucide="chevron-down" style="width: 16px; height: 16px; color: var(--slate-400);"></i>
+        </div>
+        <button class="btn-icon" title="新建聊天">
+          <i data-lucide="edit"></i>
+        </button>
+      </div>
+
+      <div class="sidebar-search">
+        <div class="search-wrapper">
+          <i data-lucide="search" style="width: 16px; height: 16px;"></i>
+          <input type="text" class="input-control" placeholder="搜索联系人或群组...">
+        </div>
+      </div>
+
+      <div class="sidebar-nav">
+        <div class="nav-item active">最近</div>
+        <div class="nav-item">好友</div>
+        <div class="nav-item">群聊</div>
+      </div>
+
+      <div class="sidebar-list">
+        <div class="list-group-title">未读消息</div>
+        
+        <div class="list-item active">
+          <div class="avatar-wrapper">
+            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Alex" alt="Alex" class="avatar avatar-md">
+            <span class="status-indicator online"></span>
+          </div>
+          <div class="list-item-content">
+            <div class="list-item-header">
+              <span class="list-item-title">Alex</span>
+              <span class="list-item-time">10:42</span>
+            </div>
+            <div class="list-item-preview">
+              <span class="text-truncate">那我们下午两点开会讨论一下这个设计方案。</span>
+              <span class="badge">2</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="list-group-title">全部会话</div>
+
+        <div class="list-item">
+          <div class="avatar-wrapper">
+            <img src="https://api.dicebear.com/7.x/shapes/svg?seed=DesignGroup" alt="设计组" class="avatar avatar-md" style="border-radius: 8px;">
+          </div>
+          <div class="list-item-content">
+            <div class="list-item-header">
+              <span class="list-item-title">前端设计交流群</span>
+              <span class="list-item-time">昨天</span>
+            </div>
+            <div class="list-item-preview">
+              <span class="text-truncate">Sarah: 刚更新了 Figma 文件</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="list-item">
+          <div class="avatar-wrapper">
+            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=John" alt="John" class="avatar avatar-md">
+            <span class="status-indicator offline"></span>
+          </div>
+          <div class="list-item-content">
+            <div class="list-item-header">
+              <span class="list-item-title">John Doe</span>
+              <span class="list-item-time">星期二</span>
+            </div>
+            <div class="list-item-preview">
+              <span class="text-truncate">收到，谢谢！</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Chat Area -->
+    <main class="app-main">
+      <header class="chat-header">
+        <div class="chat-title-group">
+          <div class="avatar-wrapper">
+            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Alex" alt="Alex" class="avatar avatar-md">
+            <span class="status-indicator online"></span>
+          </div>
+          <div>
+            <div class="chat-title">Alex</div>
+            <div class="chat-status">在线</div>
+          </div>
+        </div>
+        <div class="chat-actions">
+          <button class="btn-icon" title="语音通话">
+            <i data-lucide="phone"></i>
+          </button>
+          <button class="btn-icon" title="搜索记录">
+            <i data-lucide="search"></i>
+          </button>
+          <button class="btn-icon" title="设置">
+            <i data-lucide="more-vertical"></i>
+          </button>
+        </div>
+      </header>
+
+      <div class="chat-messages">
+        <div class="date-divider">
+          <span>今天</span>
+        </div>
+
+        <div class="message">
+          <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Alex" alt="Alex" class="avatar avatar-sm">
+          <div class="message-content">
+            <div class="message-header">
+              <span class="message-sender">Alex</span>
+              <span class="message-time">10:30 AM</span>
+            </div>
+            <div class="message-bubble">
+              嗨！昨天的需求文档你看过了吗？我觉得聊天界面的 UI 还可以再优化一下。
+            </div>
+          </div>
+        </div>
+
+        <div class="message self">
+          <div class="message-content">
+            <div class="message-header">
+              <span class="message-sender">我</span>
+              <span class="message-time">10:35 AM</span>
+            </div>
+            <div class="message-bubble">
+              看过了。我正在尝试用更干净的现代企业风格重新设计。
+            </div>
+            <div class="message-bubble">
+              去掉了繁杂的阴影，增加了对比度，主要是参考了 Open Design 的规范。
+            </div>
+          </div>
+        </div>
+
+        <div class="message">
+          <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Alex" alt="Alex" class="avatar avatar-sm">
+          <div class="message-content">
+            <div class="message-header">
+              <span class="message-sender">Alex</span>
+              <span class="message-time">10:42 AM</span>
+            </div>
+            <div class="message-bubble">
+              太棒了！听起来很有质感。
+            </div>
+            <div class="message-bubble">
+              那我们下午两点开会讨论一下这个设计方案。
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="chat-input">
+        <div class="chat-input-container">
+          <textarea class="chat-textarea" placeholder="输入消息..." rows="1"></textarea>
+          <div class="chat-toolbar">
+            <div class="toolbar-actions">
+              <button class="btn-icon" title="发送表情">
+                <i data-lucide="smile"></i>
+              </button>
+              <button class="btn-icon" title="发送图片">
+                <i data-lucide="image"></i>
+              </button>
+              <button class="btn-icon" title="发送文件">
+                <i data-lucide="paperclip"></i>
+              </button>
+              <button class="btn-icon" title="发送语音">
+                <i data-lucide="mic"></i>
+              </button>
+            </div>
+            <button class="btn btn-primary" style="height: 32px; border-radius: var(--radius-md);">
+              <i data-lucide="send" style="width: 16px; height: 16px; margin-right: 4px;"></i>
+              发送
+            </button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    lucide.createIcons();
+  </script>
+</body>
+</html>

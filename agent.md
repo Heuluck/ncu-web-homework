@@ -72,3 +72,52 @@ db/               — 数据库迁移脚本
    ├─ 提交 PR
    └─ 合并到 main
 ```
+
+## 前端开发规范
+
+### 设计系统
+- **设计 Token**：`css/variables.css`（颜色、字体、间距、圆角、阴影）
+- **通用组件**：`css/components.css`（按钮、输入框、卡片、头像、消息气泡等）
+- **页面样式**：`css/style.css`（布局、页面级样式）
+
+### 如何保证 UI 风格统一
+
+1. **使用 CSS 变量**
+   - 颜色：使用 `var(--color-primary)` 而非硬编码 `#27272a`
+   - 间距：使用 `var(--space-4)` 而非硬编码 `16px`
+   - 字体：使用 `var(--font-sans)` 而非硬编码字体名
+
+2. **使用通用组件类**
+   - 按钮：`.btn`、`.btn-primary`、`.btn-secondary`、`.btn-ghost`
+   - 输入框：`.input-control`、`.input-group`
+   - 卡片：`.card`
+   - 头像：`.avatar`、`.avatar-sm`、`.avatar-md`
+   - 列表项：`.list-item`
+
+3. **图标和头像**
+   - 图标库：Lucide Icons（`<i data-lucide="icon-name"></i>`）
+   - 头像：DiceBear API（`https://api.dicebear.com/7.x/avataaars/svg?seed=xxx`）
+
+4. **新建页面模板**
+   ```html
+   <!DOCTYPE html>
+   <html lang="zh-CN">
+   <head>
+     <meta charset="UTF-8">
+     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+     <title>页面标题 - 在线聊天系统</title>
+     <link rel="stylesheet" href="/css/variables.css">
+     <link rel="stylesheet" href="/css/components.css">
+     <link rel="stylesheet" href="/css/style.css">
+     <script src="https://unpkg.com/lucide@latest"></script>
+   </head>
+   <body>
+     <!-- 内容 -->
+     <script>lucide.createIcons();</script>
+   </body>
+   </html>
+   ```
+
+5. **参考预览页面**
+   - `preview.html` 展示了完整的 UI 风格和组件用法
+   - 新开发页面应保持一致的视觉风格

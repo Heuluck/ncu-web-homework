@@ -84,10 +84,13 @@ spring:
 
 > 需要本地安装 `mysql` 客户端。如果没有，也可以手动登录 MySQL 执行 `db/migration/` 下的 SQL 文件。
 
-**3. 编译并启动**
+**3. 一键启动**
 ```bash
-cd backend
-mvn spring-boot:run
+# macOS / Linux
+./start.sh
+
+# Windows PowerShell
+.\start.ps1
 ```
 
 **4. 访问**

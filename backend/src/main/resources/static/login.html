@@ -7,7 +7,6 @@
   <link rel="stylesheet" href="/css/variables.css">
   <link rel="stylesheet" href="/css/components.css">
   <link rel="stylesheet" href="/css/style.css">
-  <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
@@ -22,6 +21,7 @@
       </div>
 
       <div class="card auth-card">
+        <div id="errorMsg" class="alert alert-error" style="display: none;"></div>
         <form class="auth-form" id="loginForm">
           <div class="input-group">
             <label class="input-label" for="username">用户名</label>
@@ -45,12 +45,40 @@
     </div>
   </div>
 
+  <script src="/js/api.js"></script>
+  <script src="/js/auth.js"></script>
   <script>
     lucide.createIcons();
-    // 占位逻辑
-    document.getElementById('loginForm').addEventListener('submit', (e) => {
-      e.preventDefault();
+
+    // 已登录则跳转
+    if (Auth.isLoggedIn()) {
       window.location.href = '/index.html';
+    }
+
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const username = document.getElementById('username').value;
+      const password = document.getElementById('password').value;
+      const errorMsg = document.getElementById('errorMsg');
+      const submitBtn = e.target.querySelector('button[type="submit"]');
+      
+      errorMsg.style.display = 'none';
+      submitBtn.disabled = true;
+      submitBtn.textContent = '登录中...';
+      
+      const result = await API.post('/api/auth/login', { username, password });
+      
+      if (result && result.code === 200) {
+        Auth.setToken(result.data.token);
+        Auth.setUser(result.data.user);
+        window.location.href = '/index.html';
+      } else {
+        errorMsg.textContent = result?.message || '登录失败';
+        errorMsg.style.display = 'block';
+        submitBtn.disabled = false;
+        submitBtn.textContent = '登录';
+      }
     });
   </script>
 </body>

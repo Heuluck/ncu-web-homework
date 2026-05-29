@@ -21,10 +21,11 @@
       </div>
 
       <div class="card auth-card">
+        <div id="errorMsg" class="alert alert-error" style="display: none;"></div>
         <form class="auth-form" id="registerForm">
           <div class="input-group">
             <label class="input-label" for="username">用户名</label>
-            <input type="text" id="username" class="input-control" placeholder="设置用户名" required>
+            <input type="text" id="username" class="input-control" placeholder="3-20个字符" required>
           </div>
           
           <div class="input-group">
@@ -54,11 +55,55 @@
     </div>
   </div>
 
+  <script src="/js/api.js"></script>
+  <script src="/js/auth.js"></script>
   <script>
     lucide.createIcons();
-    document.getElementById('registerForm').addEventListener('submit', (e) => {
+
+    // 已登录则跳转
+    if (Auth.isLoggedIn()) {
+      window.location.href = '/index.html';
+    }
+
+    document.getElementById('registerForm').addEventListener('submit', async (e) => {
       e.preventDefault();
-      window.location.href = '/login.html';
+      
+      const username = document.getElementById('username').value;
+      const nickname = document.getElementById('nickname').value;
+      const password = document.getElementById('password').value;
+      const confirmPassword = document.getElementById('confirmPassword').value;
+      const errorMsg = document.getElementById('errorMsg');
+      const submitBtn = e.target.querySelector('button[type="submit"]');
+      
+      errorMsg.style.display = 'none';
+      
+      // 前端校验
+      if (password !== confirmPassword) {
+        errorMsg.textContent = '两次密码不一致';
+        errorMsg.style.display = 'block';
+        return;
+      }
+      
+      submitBtn.disabled = true;
+      submitBtn.textContent = '注册中...';
+      
+      const result = await API.post('/api/auth/register', { 
+        username, 
+        nickname, 
+        password, 
+        confirmPassword 
+      });
+      
+      if (result && result.code === 200) {
+        Auth.setToken(result.data.token);
+        Auth.setUser(result.data.user);
+        window.location.href = '/index.html';
+      } else {
+        errorMsg.textContent = result?.message || '注册失败';
+        errorMsg.style.display = 'block';
+        submitBtn.disabled = false;
+        submitBtn.textContent = '注册并登录';
+      }
     });
   </script>
 </body>

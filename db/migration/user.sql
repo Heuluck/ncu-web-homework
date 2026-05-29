@@ -1,0 +1,17 @@
+USE chat_system;
+
+CREATE TABLE IF NOT EXISTS `user` (
+    `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
+    `username` VARCHAR(50) NOT NULL UNIQUE,
+    `password` VARCHAR(255) NOT NULL,
+    `nickname` VARCHAR(50) NOT NULL,
+    `avatar` VARCHAR(255) DEFAULT NULL,
+    `signature` VARCHAR(255) DEFAULT NULL,
+    `status` TINYINT DEFAULT 0 COMMENT '0-离线 1-在线 2-忙碌 3-勿扰',
+    `role` TINYINT DEFAULT 0 COMMENT '0-普通用户 1-管理员',
+    `enabled` TINYINT DEFAULT 1 COMMENT '0-禁用 1-启用',
+    `deleted` TINYINT DEFAULT 0,
+    `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP,
+    `update_time` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    `last_login_time` DATETIME DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

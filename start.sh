@@ -15,19 +15,24 @@ if ! command -v mvn &> /dev/null; then
     exit 1
 fi
 
-# 检查 MySQL 客户端
-if ! command -v mysql &> /dev/null; then
-    echo "警告: 未找到 mysql 客户端，跳过数据库迁移"
-    echo "   请手动执行 db/migrate.sh 或确保数据库已就绪"
-else
+# 数据库迁移
+if command -v mysql &> /dev/null; then
     echo "1. 执行数据库迁移..."
     ./db/migrate.sh
+else
+    echo "1. 跳过数据库迁移（未找到 mysql 客户端）"
 fi
 
-echo "2. 编译项目..."
+# 同步前端文件到 static/
+echo "2. 同步前端文件..."
+cp -r frontend/* backend/src/main/resources/static/ 2>/dev/null || true
+
+# 编译
+echo "3. 编译项目..."
 mvn -f backend/pom.xml package -DskipTests -q
 
-echo "3. 启动应用..."
+# 启动
+echo "4. 启动应用..."
 echo "   访问地址: http://localhost:8080"
 echo "   按 Ctrl+C 停止"
 echo ""

@@ -1,0 +1,14 @@
+# 本地开发配置模板
+# 复制本文件为 application-local.yml 并填入你的本地配置
+# Spring 启动时使用 --spring.profiles.active=local 即可加载
+# 此文件不包含任何敏感信息，可安全提交到 git
+
+spring:
+  datasource:
+    url: ${LOCAL_DB_URL:jdbc:mysql://localhost:3306/chat_system?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true}
+    username: ${LOCAL_DB_USERNAME:root}
+    password: ${LOCAL_DB_PASSWORD:CHANGE_ME}
+
+jwt:
+  secret: ${LOCAL_JWT_SECRET:CHANGE_ME_GENERATE_A_SECURE_256BIT_KEY}
+  expiration: ${LOCAL_JWT_EXPIRATION:86400000}

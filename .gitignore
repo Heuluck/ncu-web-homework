@@ -37,3 +37,7 @@ ai-plugin.json
 .env.*.local
 *.swp
 *.bak
+
+# Local Spring profile (contains personal dev config, e.g. local DB password)
+backend/src/main/resources/application-local.yml
+backend/src/test/resources/application-local.yml

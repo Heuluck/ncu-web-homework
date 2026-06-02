@@ -24,8 +24,14 @@ logs/
 # Uploads
 backend/uploads/
 
+# Frontend copy (source: frontend/)
+backend/src/main/resources/static/
+
 # Node
 node_modules/
+
+# Local config override
+application-local.yml
 
 # Agent config (local)
 .ttadk/

@@ -59,7 +59,7 @@ class UserServiceTest {
         dto.setConfirmPassword("password123");
         dto.setNickname("新用户");
 
-        when(userMapper.selectCount(any(LambdaQueryWrapper.class))).thenReturn(0);
+        when(userMapper.selectCount(any())).thenReturn(0L);
         when(userMapper.insert(any(User.class))).thenReturn(1);
         when(jwtUtil.generateToken(any(), any())).thenReturn("test-token");
 
@@ -91,7 +91,7 @@ class UserServiceTest {
         dto.setConfirmPassword("password123");
         dto.setNickname("用户");
 
-        when(userMapper.selectCount(any(LambdaQueryWrapper.class))).thenReturn(1);
+        when(userMapper.selectCount(any())).thenReturn(1L);
 
         RuntimeException exception = assertThrows(RuntimeException.class, () -> userService.register(dto));
         assertEquals("用户名已存在", exception.getMessage());
@@ -103,7 +103,7 @@ class UserServiceTest {
         dto.setUsername("testuser");
         dto.setPassword("password123");
 
-        when(userMapper.selectOne(any(LambdaQueryWrapper.class))).thenReturn(testUser);
+        when(userMapper.selectOne(any())).thenReturn(testUser);
         when(userMapper.updateById(any(User.class))).thenReturn(1);
         when(jwtUtil.generateToken(any(), any())).thenReturn("test-token");
 
@@ -120,7 +120,7 @@ class UserServiceTest {
         dto.setUsername("nonexistent");
         dto.setPassword("password123");
 
-        when(userMapper.selectOne(any(LambdaQueryWrapper.class))).thenReturn(null);
+        when(userMapper.selectOne(any())).thenReturn(null);
 
         RuntimeException exception = assertThrows(RuntimeException.class, () -> userService.login(dto));
         assertEquals("用户名不存在", exception.getMessage());
@@ -132,7 +132,7 @@ class UserServiceTest {
         dto.setUsername("testuser");
         dto.setPassword("wrongpassword");
 
-        when(userMapper.selectOne(any(LambdaQueryWrapper.class))).thenReturn(testUser);
+        when(userMapper.selectOne(any())).thenReturn(testUser);
 
         RuntimeException exception = assertThrows(RuntimeException.class, () -> userService.login(dto));
         assertEquals("密码错误", exception.getMessage());
@@ -145,7 +145,7 @@ class UserServiceTest {
         dto.setUsername("testuser");
         dto.setPassword("password123");
 
-        when(userMapper.selectOne(any(LambdaQueryWrapper.class))).thenReturn(testUser);
+        when(userMapper.selectOne(any())).thenReturn(testUser);
 
         RuntimeException exception = assertThrows(RuntimeException.class, () -> userService.login(dto));
         assertEquals("账号已被禁用", exception.getMessage());

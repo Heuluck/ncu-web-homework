@@ -4,14 +4,18 @@ set -e
 DB_HOST=${DB_HOST:-localhost}
 DB_PORT=${DB_PORT:-3306}
 DB_USER=${DB_USER:-root}
-DB_PASS=${DB_PASS:-root}
+DB_PASS=${DB_PASS-root}
 DB_NAME=${DB_NAME:-chat_system}
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 MIGRATION_DIR="$SCRIPT_DIR/migration"
 
 mysql_cmd() {
-    mysql -h"$DB_HOST" -P"$DB_PORT" -u"$DB_USER" -p"$DB_PASS" "$@"
+    if [ -z "$DB_PASS" ]; then
+        mysql -u"$DB_USER" "$@"
+    else
+        mysql -h"$DB_HOST" -P"$DB_PORT" -u"$DB_USER" -p"$DB_PASS" "$@"
+    fi
 }
 
 echo "=== 数据库迁移 ==="

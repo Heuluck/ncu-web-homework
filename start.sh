@@ -36,4 +36,4 @@ echo "4. 启动应用..."
 echo "   访问地址: http://localhost:8080"
 echo "   按 Ctrl+C 停止"
 echo ""
-java -jar backend/target/*.jar
+java -jar backend/target/*.jar --spring.profiles.active=local

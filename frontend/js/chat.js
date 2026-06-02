@@ -99,13 +99,7 @@ const ChatManager = {
       html += '<div class="load-more-wrapper"><button class="btn btn-ghost btn-sm" id="loadMoreBtn">加载更多</button></div>';
     }
 
-    let lastDate = '';
     messages.forEach(msg => {
-      const msgDate = this._getDateLabel(msg.createTime);
-      if (msgDate !== lastDate) {
-        html += `<div class="date-divider"><span>${msgDate}</span></div>`;
-        lastDate = msgDate;
-      }
       html += this._renderBubble(msg);
     });
 
@@ -137,13 +131,7 @@ const ChatManager = {
       html += '<div class="load-more-wrapper"><button class="btn btn-ghost btn-sm" id="loadMoreBtn">加载更多</button></div>';
     }
 
-    let lastDate = '';
     messages.forEach(msg => {
-      const msgDate = this._getDateLabel(msg.createTime);
-      if (msgDate !== lastDate) {
-        html += `<div class="date-divider"><span>${msgDate}</span></div>`;
-        lastDate = msgDate;
-      }
       html += this._renderBubble(msg);
     });
 
@@ -254,12 +242,6 @@ const ChatManager = {
     const emptyEl = messagesEl.querySelector('.chat-empty');
     if (emptyEl) emptyEl.remove();
 
-    const msgDate = this._getDateLabel(msg.createTime);
-    const lastDivider = messagesEl.querySelector('.date-divider:last-of-type span');
-    if (!lastDivider || lastDivider.textContent !== msgDate) {
-      messagesEl.insertAdjacentHTML('beforeend', `<div class="date-divider"><span>${msgDate}</span></div>`);
-    }
-
     messagesEl.insertAdjacentHTML('beforeend', this._renderBubble(msg));
     lucide.createIcons();
   },
@@ -281,23 +263,4 @@ const ChatManager = {
     });
   },
 
-  _getDateLabel(dateStr) {
-    if (!dateStr) return '';
-    const date = new Date(dateStr);
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const msgDay = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-    const diff = today - msgDay;
-
-    if (diff === 0) return '今天';
-    if (diff === 86400000) return '昨天';
-    if (diff < 86400000 * 7) {
-      const days = ['日', '一', '二', '三', '四', '五', '六'];
-      return '星期' + days[date.getDay()];
-    }
-
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${month}-${day}`;
-  }
 };

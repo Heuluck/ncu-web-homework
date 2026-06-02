@@ -1,0 +1,215 @@
+package com.ncu.chat.service.impl;
+
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.ncu.chat.common.PageResult;
+import com.ncu.chat.mapper.PrivateMessageMapper;
+import com.ncu.chat.mapper.UserMapper;
+import com.ncu.chat.model.dto.PrivateMessageSendDTO;
+import com.ncu.chat.model.entity.PrivateMessage;
+import com.ncu.chat.model.entity.User;
+import com.ncu.chat.model.vo.ConversationVO;
+import com.ncu.chat.model.vo.PrivateMessageVO;
+import com.ncu.chat.service.PrivateMessageService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.*;
+import java.util.stream.Collectors;
+
+@Service
+@RequiredArgsConstructor
+public class PrivateMessageServiceImpl implements PrivateMessageService {
+
+    private final PrivateMessageMapper privateMessageMapper;
+    private final UserMapper userMapper;
+
+    @Override
+    @Transactional
+    public PrivateMessageVO sendMessage(Long senderId, PrivateMessageSendDTO dto) {
+        // 持久化消息
+        PrivateMessage pm = new PrivateMessage();
+        pm.setSenderId(senderId);
+        pm.setReceiverId(dto.getReceiverId());
+        pm.setContent(dto.getContent());
+        pm.setMessageType(dto.getMessageType() != null ? dto.getMessageType() : 0);
+        pm.setFileUrl(dto.getFileUrl());
+        pm.setStatus(0);
+        privateMessageMapper.insert(pm);
+
+        // 查询发送者信息
+        User sender = userMapper.selectById(senderId);
+
+        return convertToVO(pm, sender);
+    }
+
+    @Override
+    public PageResult<PrivateMessageVO> getHistory(Long userId, Long friendId, Integer pageNum, Integer pageSize) {
+        Page<PrivateMessage> page = new Page<>(pageNum, pageSize);
+
+        LambdaQueryWrapper<PrivateMessage> wrapper = new LambdaQueryWrapper<>();
+        wrapper.and(w -> w
+                .and(w1 -> w1.eq(PrivateMessage::getSenderId, userId).eq(PrivateMessage::getReceiverId, friendId))
+                .or(w2 -> w2.eq(PrivateMessage::getSenderId, friendId).eq(PrivateMessage::getReceiverId, userId))
+        );
+        wrapper.orderByDesc(PrivateMessage::getCreateTime);
+
+        Page<PrivateMessage> result = privateMessageMapper.selectPage(page, wrapper);
+
+        // 批量查询相关用户信息
+        Set<Long> userIds = result.getRecords().stream()
+                .map(PrivateMessage::getSenderId)
+                .collect(Collectors.toSet());
+        userIds.add(userId);
+        userIds.add(friendId);
+
+        Map<Long, User> userMap = new HashMap<>();
+        if (!userIds.isEmpty()) {
+            List<User> users = userMapper.selectBatchIds(userIds);
+            users.forEach(u -> userMap.put(u.getId(), u));
+        }
+
+        List<PrivateMessageVO> voList = result.getRecords().stream()
+                .map(pm -> convertToVO(pm, userMap.get(pm.getSenderId())))
+                .collect(Collectors.toList());
+
+        // 反转为时间正序（前端展示用）
+        Collections.reverse(voList);
+
+        return new PageResult<>(voList, result.getTotal(), pageNum, pageSize);
+    }
+
+    @Override
+    public List<PrivateMessageVO> getUnreadMessages(Long userId) {
+        LambdaQueryWrapper<PrivateMessage> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(PrivateMessage::getReceiverId, userId)
+                .eq(PrivateMessage::getStatus, 0)
+                .orderByDesc(PrivateMessage::getCreateTime);
+
+        List<PrivateMessage> messages = privateMessageMapper.selectList(wrapper);
+
+        Set<Long> senderIds = messages.stream()
+                .map(PrivateMessage::getSenderId)
+                .collect(Collectors.toSet());
+
+        Map<Long, User> userMap = new HashMap<>();
+        if (!senderIds.isEmpty()) {
+            List<User> users = userMapper.selectBatchIds(senderIds);
+            users.forEach(u -> userMap.put(u.getId(), u));
+        }
+
+        return messages.stream()
+                .map(pm -> convertToVO(pm, userMap.get(pm.getSenderId())))
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional
+    public void markAsRead(Long userId, Long friendId) {
+        privateMessageMapper.markAsRead(userId, friendId);
+    }
+
+    @Override
+    public List<ConversationVO> getRecentConversations(Long userId) {
+        // 查询所有与当前用户相关的消息，按最近消息分组
+        // 使用 SQL 子查询获取每个会话的最后一条消息和未读数
+        
+        // 1. 获取所有与 userId 相关的对方 ID（去重）
+        LambdaQueryWrapper<PrivateMessage> wrapper = new LambdaQueryWrapper<>();
+        wrapper.and(w -> w
+                .eq(PrivateMessage::getSenderId, userId)
+                .or()
+                .eq(PrivateMessage::getReceiverId, userId)
+        );
+        wrapper.select(PrivateMessage::getSenderId, PrivateMessage::getReceiverId);
+        List<PrivateMessage> allMessages = privateMessageMapper.selectList(wrapper);
+
+        Set<Long> friendIds = new HashSet<>();
+        for (PrivateMessage pm : allMessages) {
+            if (pm.getSenderId().equals(userId)) {
+                friendIds.add(pm.getReceiverId());
+            } else {
+                friendIds.add(pm.getSenderId());
+            }
+        }
+
+        if (friendIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        // 2. 查询每个会话的最后一条消息和未读数
+        List<ConversationVO> conversations = new ArrayList<>();
+        for (Long friendId : friendIds) {
+            // 最后一条消息
+            LambdaQueryWrapper<PrivateMessage> lastMsgWrapper = new LambdaQueryWrapper<>();
+            lastMsgWrapper.and(w -> w
+                    .and(w1 -> w1.eq(PrivateMessage::getSenderId, userId).eq(PrivateMessage::getReceiverId, friendId))
+                    .or(w2 -> w2.eq(PrivateMessage::getSenderId, friendId).eq(PrivateMessage::getReceiverId, userId))
+            );
+            lastMsgWrapper.orderByDesc(PrivateMessage::getCreateTime);
+            lastMsgWrapper.last("LIMIT 1");
+            PrivateMessage lastMsg = privateMessageMapper.selectOne(lastMsgWrapper);
+
+            if (lastMsg == null) continue;
+
+            // 未读数（对方发给我的未读消息）
+            LambdaQueryWrapper<PrivateMessage> unreadWrapper = new LambdaQueryWrapper<>();
+            unreadWrapper.eq(PrivateMessage::getSenderId, friendId)
+                    .eq(PrivateMessage::getReceiverId, userId)
+                    .eq(PrivateMessage::getStatus, 0);
+            Long unreadCount = privateMessageMapper.selectCount(unreadWrapper);
+
+            // 查询对方信息
+            User friend = userMapper.selectById(friendId);
+
+            ConversationVO vo = new ConversationVO();
+            vo.setFriendId(friendId);
+            vo.setNickname(friend != null ? friend.getNickname() : "未知用户");
+            vo.setAvatar(friend != null ? friend.getAvatar() : null);
+            vo.setOnlineStatus(friend != null ? friend.getStatus() : 0);
+            vo.setLastMessage(lastMsg.getContent());
+            vo.setLastMessageType(getMessageTypeText(lastMsg.getMessageType()));
+            vo.setLastTime(lastMsg.getCreateTime());
+            vo.setUnreadCount(unreadCount.intValue());
+
+            conversations.add(vo);
+        }
+
+        // 3. 按最后消息时间倒序排列
+        conversations.sort((a, b) -> {
+            if (a.getLastTime() == null) return 1;
+            if (b.getLastTime() == null) return -1;
+            return b.getLastTime().compareTo(a.getLastTime());
+        });
+
+        return conversations;
+    }
+
+    // --- 辅助方法 ---
+
+    private PrivateMessageVO convertToVO(PrivateMessage pm, User sender) {
+        PrivateMessageVO vo = new PrivateMessageVO();
+        vo.setId(pm.getId());
+        vo.setSenderId(pm.getSenderId());
+        vo.setReceiverId(pm.getReceiverId());
+        vo.setContent(pm.getContent());
+        vo.setMessageType(pm.getMessageType());
+        vo.setStatus(pm.getStatus());
+        vo.setFileUrl(pm.getFileUrl());
+        vo.setCreateTime(pm.getCreateTime());
+        vo.setSenderNickname(sender != null ? sender.getNickname() : "未知用户");
+        vo.setSenderAvatar(sender != null ? sender.getAvatar() : null);
+        return vo;
+    }
+
+    private String getMessageTypeText(Integer messageType) {
+        if (messageType == null) return "";
+        switch (messageType) {
+            case 1: return "[图片]";
+            case 2: return "[文件]";
+            case 3: return "[语音]";
+            default: return "";
+        }
+    }
+}

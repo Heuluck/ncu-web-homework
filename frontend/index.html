@@ -138,14 +138,21 @@
     </main>
   </div>
 
+  <!-- SockJS + STOMP.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+
   <script src="/js/api.js"></script>
   <script src="/js/auth.js"></script>
   <script src="/js/utils.js"></script>
+  <script src="/js/websocket.js"></script>
+  <script src="/js/conversation.js"></script>
+  <script src="/js/chat.js"></script>
   <script>
     // 认证检查
     if (!Auth.checkAuth()) location.href = '/login.html';
-    
-    // 初始化
+
+    // 初始化用户信息
     const user = Auth.getUser();
     document.getElementById('myName').textContent = user?.nickname || user?.username || '用户';
     if (user?.signature) {
@@ -154,7 +161,6 @@
     if (user?.avatar) {
       document.getElementById('myAvatar').src = user.avatar;
     }
-    // Update status indicator
     const statusDot = document.getElementById('myStatus');
     if (statusDot && user?.status !== undefined) {
       statusDot.className = 'status-indicator';
@@ -162,27 +168,62 @@
       else if (user.status === 2) statusDot.classList.add('busy');
       else if (user.status === 3) statusDot.classList.add('dnd');
     }
-    
+
     lucide.createIcons();
 
-    // 标签页切换
+    // ===== WebSocket 初始化 =====
+    WebSocketManager.onMessage((data) => {
+      if (data.type === 'READ_RECEIPT') {
+        ChatManager.receiveReadReceipt(data.friendId);
+      } else {
+        ChatManager.receiveMessage(data);
+      }
+    });
+
+    WebSocketManager.onStatusChange((data) => {
+      ConversationManager.updateOnlineStatus(data.userId, data.status);
+    });
+
+    WebSocketManager.connect();
+    ConversationManager.loadConversations();
+
+    // ===== 标签页切换 =====
     document.querySelectorAll('.nav-item').forEach(tab => {
       tab.addEventListener('click', () => {
         document.querySelectorAll('.nav-item').forEach(t => t.classList.remove('active'));
         tab.classList.add('active');
         const tabName = tab.dataset.tab;
         document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
-        document.getElementById(tabName === 'recent' ? 'conversationList' : 
+        document.getElementById(tabName === 'recent' ? 'conversationList' :
                                 tabName === 'friends' ? 'friendList' : 'groupList').style.display = 'block';
       });
     });
 
-    // 下拉菜单
+    // ===== 消息输入 =====
+    const messageInput = document.getElementById('messageInput');
+    const sendBtn = document.getElementById('sendBtn');
+
+    messageInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        ChatManager.sendMessage();
+      }
+    });
+
+    sendBtn.addEventListener('click', () => {
+      ChatManager.sendMessage();
+    });
+
+    messageInput.addEventListener('input', () => {
+      messageInput.style.height = 'auto';
+      messageInput.style.height = Math.min(messageInput.scrollHeight, 120) + 'px';
+    });
+
+    // ===== 下拉菜单 =====
     function toggleProfileDropdown(el, event) {
       event.stopPropagation();
       const dropdown = el.querySelector('.dropdown');
       if (dropdown) {
-        // 先关闭其他可能开启的下拉菜单
         document.querySelectorAll('.dropdown').forEach(d => {
           if (d !== dropdown) d.classList.remove('active');
         });
@@ -197,8 +238,6 @@
     document.addEventListener('click', () => {
       document.querySelectorAll('.dropdown').forEach(d => d.classList.remove('active'));
     });
-
-
   </script>
 </body>
 </html>

@@ -1,0 +1,49 @@
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.settings/
+.classpath
+.project
+.factorypath
+
+# Build
+backend/target/
+*.class
+*.jar
+*.war
+
+# Logs
+*.log
+logs/
+
+# Uploads
+backend/uploads/
+
+# Frontend copy (source: frontend/)
+backend/src/main/resources/static/
+
+# Node
+node_modules/
+
+# Local config override
+application-local.yml
+
+# Agent config (local)
+.ttadk/
+ai-plugin.json
+
+# Env
+.env
+.env.local
+.env.*.local
+*.swp
+*.bak
+
+# Local Spring profile (contains personal dev config, e.g. local DB password)
+backend/src/main/resources/application-local.yml
+backend/src/test/resources/application-local.yml

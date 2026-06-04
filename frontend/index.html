@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>在线聊天系统</title>
+  <link rel="stylesheet" href="css/variables.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    /* 模态框样式 */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+    .modal-container {
+      background: var(--bg-app);
+      border-radius: var(--radius-2xl);
+      box-shadow: var(--shadow-lg);
+      width: 90%;
+      max-width: 500px;
+      max-height: 85vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: var(--space-5) var(--space-6);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .modal-header h3 {
+      font-size: var(--text-lg);
+      font-weight: var(--font-semibold);
+    }
+    .modal-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: var(--space-6);
+    }
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: var(--space-3);
+      padding: var(--space-4) var(--space-6);
+      border-top: 1px solid var(--border-subtle);
+    }
+    .form-group {
+      margin-bottom: var(--space-5);
+    }
+    .form-label {
+      display: block;
+      margin-bottom: var(--space-2);
+      font-size: var(--text-sm);
+      font-weight: var(--font-medium);
+      color: var(--text-main);
+    }
+    .friend-item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      padding: var(--space-3);
+      cursor: pointer;
+      transition: background var(--transition-fast);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .friend-item:hover {
+      background: var(--bg-surface-hover);
+    }
+    .friend-item.selected {
+      background: var(--bg-surface);
+    }
+    .friend-name {
+      flex: 1;
+      font-size: var(--text-sm);
+    }
+    .friend-checkbox {
+      color: var(--slate-400);
+    }
+    .friend-item.selected .friend-checkbox {
+      color: var(--color-primary);
+    }
+    .friend-list-container {
+      max-height: 250px;
+      overflow-y: auto;
+    }
+    .selected-friends {
+      margin-top: var(--space-3);
+    }
+    .selected-label {
+      font-size: var(--text-xs);
+      color: var(--text-muted);
+      margin-bottom: var(--space-2);
+    }
+    .selected-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-2);
+    }
+    .selected-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-1);
+      padding: var(--space-1) var(--space-3);
+      background: var(--bg-surface);
+      border-radius: var(--radius-full);
+      font-size: var(--text-sm);
+    }
+    .selected-tag i {
+      width: 14px;
+      height: 14px;
+      cursor: pointer;
+      color: var(--text-muted);
+    }
+    .selected-tag i:hover {
+      color: var(--color-danger);
+    }
+    .settings-section {
+      margin-bottom: var(--space-6);
+      padding-bottom: var(--space-6);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .settings-section:last-child {
+      border-bottom: none;
+    }
+    .section-title {
+      font-size: var(--text-sm);
+      font-weight: var(--font-semibold);
+      margin-bottom: var(--space-3);
+      color: var(--text-main);
+    }
+    .danger-zone {
+      background: var(--bg-surface);
+      border-radius: var(--radius-lg);
+      padding: var(--space-4);
+      margin-top: var(--space-4);
+    }
+    .btn-danger {
+      background: var(--color-danger);
+      color: white;
+    }
+    .btn-danger:hover {
+      background: var(--color-danger-hover);
+    }
+    .member-item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      padding: var(--space-3);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .member-info {
+      flex: 1;
+    }
+    .member-name {
+      font-size: var(--text-sm);
+      font-weight: var(--font-medium);
+    }
+    .member-badge {
+      font-size: 11px;
+      padding: 2px 6px;
+      border-radius: var(--radius-sm);
+      background: var(--bg-surface-hover);
+      margin-left: var(--space-2);
+    }
+    .member-role {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+    .role-owner {
+      color: #f59e0b;
+    }
+    .role-admin {
+      color: var(--color-primary);
+    }
+    .member-actions {
+      display: flex;
+      gap: var(--space-1);
+    }
+    .btn-sm {
+      height: 32px;
+      padding: 0 var(--space-3);
+      font-size: var(--text-xs);
+    }
+    .member-search {
+      margin-bottom: var(--space-4);
+    }
+    .create-group-btn {
+      margin-bottom: var(--space-3);
+    }
+  </style>
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+<div class="app-layout">
+  <!-- 侧边栏 -->
+  <aside class="app-sidebar">
+    <!-- 用户信息头部 -->
+    <div class="sidebar-header">
+      <div class="sidebar-profile" onclick="toggleProfileDropdown(this, event)">
+        <div class="avatar-wrapper">
+          <img id="myAvatar" src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix" alt="头像" class="avatar avatar-sm">
+          <span id="myStatus" class="status-indicator online"></span>
+        </div>
+        <div class="sidebar-profile-info">
+          <span id="myName" class="sidebar-profile-name">用户名</span>
+          <span id="mySignature" class="sidebar-profile-signature"></span>
+        </div>
+        <div class="dropdown">
+          <button class="btn-icon" onclick="toggleDropdown(this, event)">
+            <i data-lucide="chevron-down" style="width: 16px; height: 16px;"></i>
+          </button>
+          <div class="dropdown-menu">
+            <div class="dropdown-item" onclick="location.href='/profile.html'">
+              <i data-lucide="user" style="width: 16px; height: 16px;"></i>
+              个人资料
+            </div>
+            <div class="dropdown-divider"></div>
+            <div class="dropdown-item" onclick="Auth.logout()">
+              <i data-lucide="log-out" style="width: 16px; height: 16px;"></i>
+              退出登录
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 搜索栏 -->
+    <div class="sidebar-search">
+      <div class="search-wrapper">
+        <i data-lucide="search" style="width: 16px; height: 16px;"></i>
+        <input type="text" class="input-control" placeholder="搜索联系人或群组...">
+      </div>
+    </div>
+
+    <!-- 标签页导航 -->
+    <div class="sidebar-nav">
+      <div class="nav-item active" data-tab="recent">最近</div>
+      <div class="nav-item" data-tab="friends">好友</div>
+      <div class="nav-item" data-tab="groups">群聊</div>
+    </div>
+
+    <!-- 列表内容区 -->
+    <div class="sidebar-content" id="sidebarContent">
+      <!-- 会话列表 -->
+      <div id="conversationList" class="tab-content active">
+        <div class="list-group-title">加载中...</div>
+      </div>
+
+      <!-- 好友列表（D负责） -->
+      <div id="friendList" class="tab-content" style="display: none;">
+        <div class="list-group-title">我的好友</div>
+      </div>
+
+      <!-- 群聊列表（C负责） -->
+      <div id="groupList" class="tab-content" style="display: none;">
+        <div class="create-group-btn" style="padding: 12px;">
+          <button class="btn btn-primary btn-sm" id="createGroupBtn" style="width: 100%;">
+            <i data-lucide="plus" style="width: 14px; height: 14px;"></i> 创建群聊
+          </button>
+        </div>
+        <div id="groupListContainer"></div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- 聊天区域 -->
+  <main class="chat-area">
+    <!-- 聊天头部 -->
+    <div class="chat-header" id="chatHeader" style="display: none;">
+      <div class="chat-header-info">
+        <div class="avatar-wrapper">
+          <img id="chatAvatar" src="" alt="" class="avatar avatar-md">
+          <span id="chatStatus" class="status-indicator"></span>
+        </div>
+        <div class="chat-header-details">
+          <span id="chatName" class="chat-header-name"></span>
+          <span id="chatStatusText" class="chat-header-status"></span>
+        </div>
+      </div>
+      <div class="chat-header-actions">
+        <!-- 群聊专用按钮 -->
+        <button class="btn-icon" id="groupMembersBtn" title="群成员" style="display: none;">
+          <i data-lucide="users"></i>
+        </button>
+        <button class="btn-icon" id="groupSettingsBtn" title="群设置" style="display: none;">
+          <i data-lucide="settings"></i>
+        </button>
+        <button class="btn-icon" title="语音通话">
+          <i data-lucide="phone"></i>
+        </button>
+        <button class="btn-icon" title="查看更多">
+          <i data-lucide="more-vertical"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- 消息区域 -->
+    <div class="chat-messages" id="chatMessages">
+      <div class="empty-state">
+        <div class="empty-state-icon">
+          <i data-lucide="message-square" style="width: 64px; height: 64px;"></i>
+        </div>
+        <div class="empty-state-title">选择一个会话开始聊天</div>
+        <div class="empty-state-text">从左侧列表选择联系人或群组</div>
+      </div>
+    </div>
+
+    <!-- 输入区域 -->
+    <div class="chat-input-area" id="chatInputArea" style="display: none;">
+      <div class="chat-input-toolbar">
+        <button class="btn-icon" title="表情">
+          <i data-lucide="smile"></i>
+        </button>
+        <button class="btn-icon" title="图片">
+          <i data-lucide="image"></i>
+        </button>
+        <button class="btn-icon" title="文件">
+          <i data-lucide="paperclip"></i>
+        </button>
+        <button class="btn-icon" title="语音">
+          <i data-lucide="mic"></i>
+        </button>
+      </div>
+      <div class="chat-input-box">
+        <textarea id="messageInput" class="chat-input-field" placeholder="输入消息..." rows="1"></textarea>
+        <button id="sendBtn" class="btn btn-primary chat-send-btn">
+          <i data-lucide="send" style="width: 16px; height: 16px;"></i>
+        </button>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- SockJS + STOMP.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/utils.js"></script>
+<script src="js/websocket.js"></script>
+<script src="js/conversation.js"></script>
+<script src="js/chat.js"></script>
+<script src="js/group.js"></script>
+<script src="js/components/create-group-modal.js"></script>
+<script src="js/components/group-member-panel.js"></script>
+<script src="js/components/group-settings-modal.js"></script>
+<script src="js/components/group-invite-modal.js"></script>
+
+<script>
+  // 认证检查
+  if (!Auth.checkAuth()) location.href = '/login.html';
+
+  // 初始化用户信息
+  const user = Auth.getUser();
+  document.getElementById('myName').textContent = user?.nickname || user?.username || '用户';
+  if (user?.signature) {
+    document.getElementById('mySignature').textContent = user.signature;
+  }
+  if (user?.avatar) {
+    document.getElementById('myAvatar').src = user.avatar;
+  }
+  const statusDot = document.getElementById('myStatus');
+  if (statusDot && user?.status !== undefined) {
+    statusDot.className = 'status-indicator';
+    if (user.status === 1) statusDot.classList.add('online');
+    else if (user.status === 2) statusDot.classList.add('busy');
+    else if (user.status === 3) statusDot.classList.add('dnd');
+  }
+
+  lucide.createIcons();
+
+  // ===== WebSocket 初始化 =====
+  WebSocketManager.onMessage((data) => {
+    if (data.type === 'READ_RECEIPT') {
+      ChatManager.receiveReadReceipt(data.friendId);
+    } else {
+      ChatManager.receiveMessage(data);
+    }
+  });
+
+  WebSocketManager.onStatusChange((data) => {
+    ConversationManager.updateOnlineStatus(data.userId, data.status);
+  });
+
+  // 群聊消息监听
+  WebSocketManager.onGroupMessage((data) => {
+    GroupManager.receiveGroupMessage(data);
+  });
+
+  WebSocketManager.connect();
+  ConversationManager.loadConversations();
+
+  // ===== 标签页切换 =====
+  document.querySelectorAll('.nav-item').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.nav-item').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      const tabName = tab.dataset.tab;
+      document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
+      if (tabName === 'recent') {
+        document.getElementById('conversationList').style.display = 'block';
+        ConversationManager.loadConversations();
+      } else if (tabName === 'friends') {
+        document.getElementById('friendList').style.display = 'block';
+        if (typeof FriendManager !== 'undefined') FriendManager.loadFriends();
+      } else if (tabName === 'groups') {
+        document.getElementById('groupList').style.display = 'block';
+        GroupManager.loadMyGroups();
+      }
+    });
+  });
+
+  // ===== 群聊按钮事件 =====
+  document.getElementById('createGroupBtn')?.addEventListener('click', () => {
+    if (typeof CreateGroupModal !== 'undefined') {
+      CreateGroupModal.show();
+    } else {
+      Utils.showToast('功能加载中', 'warning');
+    }
+  });
+
+  document.getElementById('groupMembersBtn')?.addEventListener('click', () => {
+    if (GroupManager.currentGroupId) {
+      GroupManager.showGroupMembers();
+    }
+  });
+
+  document.getElementById('groupSettingsBtn')?.addEventListener('click', () => {
+    if (GroupManager.currentGroupId) {
+      GroupManager.showGroupSettings();
+    }
+  });
+
+  // ===== 消息输入 =====
+  const messageInput = document.getElementById('messageInput');
+  const sendBtn = document.getElementById('sendBtn');
+
+  // 修改发送逻辑：支持群聊和私聊
+  function handleSendMessage() {
+    if (GroupManager.currentGroupId) {
+      GroupManager.sendGroupMessage();
+    } else if (ChatManager.currentFriendId) {
+      ChatManager.sendMessage();
+    }
+  }
+
+  messageInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
+    }
+  });
+
+  sendBtn.addEventListener('click', () => {
+    handleSendMessage();
+  });
+
+  messageInput.addEventListener('input', () => {
+    messageInput.style.height = 'auto';
+    messageInput.style.height = Math.min(messageInput.scrollHeight, 120) + 'px';
+  });
+
+  // ===== 下拉菜单 =====
+  function toggleProfileDropdown(el, event) {
+    event.stopPropagation();
+    const dropdown = el.querySelector('.dropdown');
+    if (dropdown) {
+      document.querySelectorAll('.dropdown').forEach(d => {
+        if (d !== dropdown) d.classList.remove('active');
+      });
+      dropdown.classList.toggle('active');
+    }
+  }
+  function toggleDropdown(btn, event) {
+    event.stopPropagation();
+    const dropdown = btn.closest('.dropdown');
+    if (dropdown) dropdown.classList.toggle('active');
+  }
+  document.addEventListener('click', () => {
+    document.querySelectorAll('.dropdown').forEach(d => d.classList.remove('active'));
+  });
+
+  // 加载群列表
+  GroupManager.loadMyGroups();
+
+  // 初始化 lucide 图标
+  setTimeout(() => lucide.createIcons(), 100);
+</script>
+</body>
+</html>

@@ -1,0 +1,131 @@
+/* ============================================
+   Open Design - Chat System Tokens
+   Aesthetic: Premium / High-End App
+   ============================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+  /* Color System */
+  /* A softer, slightly gray black for a premium feel */
+  --color-primary: #27272a; /* Zinc 800 */
+  --color-primary-hover: #3f3f46; /* Zinc 700 */
+  --color-primary-subtle: #f4f4f5; /* Zinc 100 */
+  
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --color-danger: #ef4444;
+  --color-danger-hover: #dc2626;
+
+  /* Slate Grays */
+  --slate-50: #f8fafc;
+  --slate-100: #f1f5f9;
+  --slate-200: #e2e8f0;
+  --slate-300: #cbd5e1;
+  --slate-400: #94a3b8;
+  --slate-500: #64748b;
+  --slate-600: #475569;
+  --slate-700: #334155;
+  --slate-800: #1e293b;
+  --slate-900: #0f172a;
+
+  /* Backgrounds */
+  --bg-app: #ffffff;
+  --bg-sidebar: #fcfcfd;
+  --bg-chat: #ffffff;
+  --bg-surface: #f8fafc;
+  --bg-surface-hover: #f1f5f9;
+
+  /* Typography Colors */
+  --text-main: #0f172a;
+  --text-muted: #64748b;
+  --text-inverse: #ffffff;
+
+  /* Borders - Softer and more subtle */
+  --border-subtle: rgba(15, 23, 42, 0.06);
+  --border-strong: rgba(15, 23, 42, 0.12);
+  --border-focus: var(--color-primary);
+
+  /* Typography System */
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  
+  /* Harmonized Type Scale */
+  --text-xs: 0.8125rem;   /* 13px */
+  --text-sm: 0.875rem;    /* 14px */
+  --text-base: 1rem;      /* 16px */
+  --text-lg: 1.125rem;    /* 18px */
+  --text-xl: 1.25rem;     /* 20px */
+  --text-2xl: 1.75rem;    /* 28px */
+
+  /* Clear weight steps */
+  --font-normal: 400;     /* Regular reading text */
+  --font-medium: 500;     /* UI controls, secondary emphasis */
+  --font-semibold: 600;   /* Titles, primary emphasis */
+  --font-bold: 700;       /* Strongest emphasis */
+
+  /* Spacing */
+  --space-1: 0.25rem;  /* 4px */
+  --space-2: 0.5rem;   /* 8px */
+  --space-3: 0.75rem;  /* 12px */
+  --space-4: 1rem;     /* 16px */
+  --space-5: 1.25rem;  /* 20px */
+  --space-6: 1.5rem;   /* 24px */
+  --space-8: 2rem;     /* 32px */
+  --space-10: 2.5rem;  /* 40px */
+  --space-12: 3rem;    /* 48px */
+
+  /* Radii - Significantly larger for premium feel */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-2xl: 32px;
+  --radius-full: 9999px;
+
+  /* Shadows - Softer, more dispersed, and deeper */
+  --shadow-sm: 0 2px 8px -2px rgb(0 0 0 / 0.04), 0 1px 4px -1px rgb(0 0 0 / 0.02);
+  --shadow-md: 0 12px 24px -4px rgb(0 0 0 / 0.06), 0 4px 8px -2px rgb(0 0 0 / 0.03);
+  --shadow-lg: 0 24px 48px -12px rgb(0 0 0 / 0.1), 0 8px 16px -4px rgb(0 0 0 / 0.03);
+  
+  /* Layout */
+  --sidebar-w: 300px;
+  --header-h: 72px;
+  
+  /* Transitions */
+  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-smooth: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Reset / Base */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-sans);
+  color: var(--text-main);
+  background-color: var(--bg-app);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  line-height: 1.5;
+  font-weight: var(--font-normal);
+}
+
+a {
+  color: var(--color-primary);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+
+button {
+  cursor: pointer;
+  font-family: inherit;
+}
+
+input, textarea {
+  font-family: inherit;
+}

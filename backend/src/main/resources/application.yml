@@ -6,7 +6,7 @@ spring:
   datasource:
     url: jdbc:mysql://localhost:3306/chat_system?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
     username: root
-    password: aa639989
+    password: root
     driver-class-name: com.mysql.cj.jdbc.Driver
   jackson:
     date-format: yyyy-MM-dd HH:mm:ss
@@ -15,9 +15,6 @@ spring:
     multipart:
       max-file-size: 50MB
       max-request-size: 50MB
-  web:
-    resources:
-      static-locations: file:E:/web程序设计大作业/ncu-web-homework-main/frontend/, classpath:/static/
 
 mybatis-plus:
   mapper-locations: classpath*:/mapper/**/*.xml

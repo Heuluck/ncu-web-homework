@@ -11,8 +11,6 @@ import org.springframework.messaging.support.ChannelInterceptor;
 import org.springframework.messaging.support.MessageHeaderAccessor;
 import org.springframework.stereotype.Component;
 
-import java.security.Principal;
-
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -28,20 +26,17 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
             String authHeader = accessor.getFirstNativeHeader("Authorization");
             if (authHeader != null && authHeader.startsWith("Bearer ")) {
                 String token = authHeader.substring(7);
-                try {
+                if (jwtUtil.validateToken(token)) {
                     Long userId = jwtUtil.getUserIdFromToken(token);
-                    if (userId != null) {
-                        accessor.setUser(new Principal() {
-                            @Override
-                            public String getName() {
-                                return String.valueOf(userId);
-                            }
-                        });
-                    }
-                } catch (Exception e) {
-                    log.error("WebSocket认证失败: {}", e.getMessage());
+                    // 将 userId 存入 session attributes
+                    accessor.getSessionAttributes().put("userId", userId);
+                    accessor.setUser(() -> String.valueOf(userId));
+                    log.info("WebSocket 认证成功: userId={}", userId);
+                    return message;
                 }
             }
+            log.warn("WebSocket 认证失败: 无效的 Token");
+            return null; // 拒绝连接
         }
         return message;
     }

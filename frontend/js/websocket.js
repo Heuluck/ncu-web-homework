@@ -12,6 +12,7 @@ const WebSocketManager = {
   _statusCallbacks: [],
   _connectCallbacks: [],
   _disconnectCallbacks: [],
+  _groupMessageCallbacks: [],  // 群聊消息回调数组
 
   connect() {
     const token = Auth.getToken();
@@ -27,19 +28,19 @@ const WebSocketManager = {
     const headers = { 'Authorization': `Bearer ${token}` };
 
     this.stompClient.connect(headers,
-      () => {
-        console.log('[WS] 连接成功');
-        this.connected = true;
-        this.reconnectAttempts = 0;
-        this._subscribeAll();
-        this._connectCallbacks.forEach(cb => cb());
-      },
-      (error) => {
-        console.error('[WS] 连接失败:', error);
-        this.connected = false;
-        this._disconnectCallbacks.forEach(cb => cb(error));
-        this._attemptReconnect();
-      }
+        () => {
+          console.log('[WS] 连接成功');
+          this.connected = true;
+          this.reconnectAttempts = 0;
+          this._subscribeAll();
+          this._connectCallbacks.forEach(cb => cb());
+        },
+        (error) => {
+          console.error('[WS] 连接失败:', error);
+          this.connected = false;
+          this._disconnectCallbacks.forEach(cb => cb(error));
+          this._attemptReconnect();
+        }
     );
   },
 
@@ -72,6 +73,18 @@ const WebSocketManager = {
         console.error('[WS] 状态消息解析失败:', e);
       }
     });
+
+    // 添加群聊消息订阅
+    this.stompClient.subscribe('/user/queue/group_messages', (message) => {
+      try {
+        const data = JSON.parse(message.body);
+        if (this._groupMessageCallbacks) {
+          this._groupMessageCallbacks.forEach(cb => cb(data));
+        }
+      } catch (e) {
+        console.error('[WS] 群消息解析失败:', e);
+      }
+    });
   },
 
   sendMessage(to, content, messageType = 0, fileUrl = null) {
@@ -94,6 +107,21 @@ const WebSocketManager = {
   onStatusChange(cb) { this._statusCallbacks.push(cb); },
   onConnected(cb) { this._connectCallbacks.push(cb); },
   onDisconnected(cb) { this._disconnectCallbacks.push(cb); },
+
+  // 注册群聊消息回调
+  onGroupMessage(cb) {
+    this._groupMessageCallbacks.push(cb);
+  },
+
+  // 发送群聊消息
+  sendGroupMessage(groupId, content, messageType = 0) {
+    if (!this.stompClient || !this.connected) {
+      console.error('[WS] 未连接');
+      return false;
+    }
+    this.stompClient.send('/app/group.send', {}, JSON.stringify({ groupId, content, messageType }));
+    return true;
+  },
 
   _attemptReconnect() {
     if (this.reconnectAttempts >= this.maxReconnectAttempts) {

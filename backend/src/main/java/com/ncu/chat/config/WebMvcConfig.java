@@ -22,7 +22,11 @@ public class WebMvcConfig implements WebMvcConfigurer {
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(authInterceptor)
                 .addPathPatterns("/api/**")
-                .excludePathPatterns("/api/auth/**");
+                .excludePathPatterns(
+                        "/api/auth/**",
+                        "/api/user/login",     // 添加登录
+                        "/api/user/register"   // 添加注册
+                );
     }
 
     @Override

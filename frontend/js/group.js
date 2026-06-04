@@ -1,0 +1,273 @@
+/**
+ * 群聊管理器
+ */
+const GroupManager = {
+    currentGroupId: null,
+    currentGroupInfo: null,
+    groups: [],
+    members: [],
+    currentPage: 1,
+    pageSize: 20,
+    hasMore: true,
+    loading: false,
+
+    // 加载我的群列表
+    async loadMyGroups() {
+        const res = await API.get('/api/group/my-groups');
+        if (res && res.code === 200) {
+            this.groups = res.data || [];
+            this.renderGroupList();
+        }
+    },
+
+    // 渲染群列表（只更新 groupListContainer，不影响创建按钮）
+    renderGroupList() {
+        const container = document.getElementById('groupListContainer');
+        if (!container) return;
+
+        if (this.groups.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state" style="padding: 40px 20px; text-align: center;">
+                    <div class="empty-state-icon">
+                        <i data-lucide="users" style="width: 40px; height: 40px;"></i>
+                    </div>
+                    <div class="empty-state-title">暂无群聊</div>
+                    <div class="empty-state-text">点击上方按钮创建群聊</div>
+                </div>`;
+            lucide.createIcons();
+            return;
+        }
+
+        let html = '';
+        for (const group of this.groups) {
+            const isActive = this.currentGroupId === group.groupId;
+            const avatarSrc = Utils.getAvatarUrl(group.groupAvatar, `group-${group.groupId}`);
+            const unreadBadge = group.unreadCount > 0
+                ? `<span class="badge">${group.unreadCount > 99 ? '99+' : group.unreadCount}</span>`
+                : '';
+
+            html += `
+                <div class="list-item ${isActive ? 'active' : ''}" data-group-id="${group.groupId}">
+                    <div class="avatar-wrapper">
+                        <img src="${avatarSrc}" class="avatar avatar-md">
+                    </div>
+                    <div class="list-item-content">
+                        <div class="list-item-header">
+                            <span class="list-item-title">${Utils.escapeHtml(group.groupName)}</span>
+                        </div>
+                        <div class="list-item-preview">
+                            <span class="text-truncate">${Utils.escapeHtml(group.lastMessage || '')}</span>
+                            ${unreadBadge}
+                        </div>
+                    </div>
+                </div>`;
+        }
+        container.innerHTML = html;
+
+        container.querySelectorAll('.list-item').forEach(item => {
+            item.addEventListener('click', () => {
+                const groupId = parseInt(item.dataset.groupId);
+                this.openGroupChat(groupId);
+            });
+        });
+        lucide.createIcons();
+    },
+
+    // 打开群聊窗口
+    async openGroupChat(groupId) {
+        if (this.currentGroupId === groupId) return;
+        this.currentGroupId = groupId;
+        this.currentPage = 1;
+        this.hasMore = true;
+
+        // 显示群聊头部按钮
+        const membersBtn = document.getElementById('groupMembersBtn');
+        const settingsBtn = document.getElementById('groupSettingsBtn');
+        if (membersBtn) membersBtn.style.display = 'inline-flex';
+        if (settingsBtn) settingsBtn.style.display = 'inline-flex';
+
+        const infoRes = await API.get(`/api/group/info/${groupId}`);
+        if (infoRes && infoRes.code === 200) {
+            this.currentGroupInfo = infoRes.data;
+            this._renderGroupHeader();
+        }
+
+        document.getElementById('chatInputArea').style.display = '';
+        const messagesEl = document.getElementById('chatMessages');
+        messagesEl.innerHTML = '<div class="chat-loading"><div class="spinner"></div></div>';
+
+        await this.loadGroupMessages(groupId, 1, true);
+        this._markGroupRead(groupId);
+        this._clearGroupUnread(groupId);
+    },
+
+    _renderGroupHeader() {
+        if (!this.currentGroupInfo) return;
+        document.getElementById('chatHeader').style.display = '';
+        document.getElementById('chatAvatar').src = Utils.getAvatarUrl(this.currentGroupInfo.avatar, `group-${this.currentGroupInfo.id}`);
+        document.getElementById('chatName').textContent = this.currentGroupInfo.name;
+        document.getElementById('chatStatusText').textContent = `${this.currentGroupInfo.memberCount || 0} 人`;
+    },
+
+    async loadGroupMessages(groupId, pageNum, replace = false) {
+        if (this.loading) return;
+        this.loading = true;
+        const res = await API.get(`/api/group/${groupId}/messages?pageNum=${pageNum}&pageSize=${this.pageSize}`);
+        this.loading = false;
+
+        if (res && res.code === 200) {
+            const messages = res.data.records || [];
+            if (messages.length < this.pageSize) this.hasMore = false;
+            this.currentPage = pageNum;
+            if (replace) {
+                this._renderGroupMessages(messages, true);
+            } else {
+                this._prependGroupMessages(messages);
+            }
+        }
+    },
+
+    _renderGroupMessages(messages, scrollBottom = false) {
+        const messagesEl = document.getElementById('chatMessages');
+        const myId = Auth.getUserId();
+
+        if (messages.length === 0 && this.currentPage === 1) {
+            messagesEl.innerHTML = `<div class="chat-empty"><div class="empty-state"><div class="empty-state-icon"><i data-lucide="message-square"></i></div><div class="empty-state-title">开始聊天吧</div></div></div>`;
+            lucide.createIcons();
+            return;
+        }
+
+        let html = '';
+        if (this.hasMore) html += '<div class="load-more-wrapper"><button class="btn btn-ghost btn-sm" id="loadMoreGroupBtn">加载更多</button></div>';
+        messages.forEach(msg => { html += this._renderGroupBubble(msg, myId); });
+        messagesEl.innerHTML = html;
+
+        const loadMoreBtn = document.getElementById('loadMoreGroupBtn');
+        if (loadMoreBtn) loadMoreBtn.addEventListener('click', () => this.loadMoreGroupMessages());
+        lucide.createIcons();
+        if (scrollBottom) this.scrollToBottom();
+    },
+
+    _prependGroupMessages(messages) {
+        if (messages.length === 0) return;
+        const messagesEl = document.getElementById('chatMessages');
+        const prevScrollHeight = messagesEl.scrollHeight;
+        const oldBtn = document.getElementById('loadMoreGroupBtn');
+        if (oldBtn) oldBtn.parentElement?.remove();
+
+        let html = '';
+        if (this.hasMore) html += '<div class="load-more-wrapper"><button class="btn btn-ghost btn-sm" id="loadMoreGroupBtn">加载更多</button></div>';
+        messages.forEach(msg => { html += this._renderGroupBubble(msg, Auth.getUserId()); });
+        messagesEl.insertAdjacentHTML('afterbegin', html);
+        messagesEl.scrollTop = messagesEl.scrollHeight - prevScrollHeight;
+
+        const newBtn = document.getElementById('loadMoreGroupBtn');
+        if (newBtn) newBtn.addEventListener('click', () => this.loadMoreGroupMessages());
+        lucide.createIcons();
+    },
+
+    _renderGroupBubble(msg, myId) {
+        const isSelf = msg.senderId === myId;
+        const avatarSrc = Utils.getAvatarUrl(msg.senderAvatar, `user-${msg.senderId}`);
+        const time = Utils.formatMessageTime(msg.createTime);
+        const contentHtml = `<div class="message-text">${Utils.escapeHtml(msg.content)}</div>`;
+
+        if (isSelf) {
+            return `<div class="message self"><div class="message-content"><div class="message-bubble">${contentHtml}</div><div class="message-meta"><span class="message-time">${time}</span></div></div></div>`;
+        } else {
+            return `<div class="message"><img src="${avatarSrc}" class="avatar avatar-sm"><div class="message-content"><div class="message-header"><span class="message-sender">${Utils.escapeHtml(msg.senderNickname)}</span><span class="message-time">${time}</span></div><div class="message-bubble">${contentHtml}</div></div></div>`;
+        }
+    },
+
+    loadMoreGroupMessages() {
+        if (!this.hasMore || !this.currentGroupId) return;
+        this.loadGroupMessages(this.currentGroupId, this.currentPage + 1, false);
+    },
+
+    sendGroupMessage() {
+        const input = document.getElementById('messageInput');
+        const content = input.value.trim();
+        if (!content || !this.currentGroupId) return;
+
+        // 清空输入框
+        input.value = '';
+        input.style.height = 'auto';
+
+        // 只使用 HTTP API 发送，后端会自动通过 WebSocket 广播
+        API.post('/api/group/message/send', {
+            groupId: this.currentGroupId,
+            content: content,
+            messageType: 0
+        }).then(res => {
+            if (res && res.code === 200) {
+                // 发送成功，后端会广播，前端通过 WebSocket 接收
+                // 不需要手动添加消息
+            } else {
+                Utils.showToast(res?.message || '发送失败', 'error');
+            }
+        });
+    },
+
+    receiveGroupMessage(msg) {
+        if (this.currentGroupId === msg.groupId) {
+            this._appendGroupBubble(msg);
+            this.scrollToBottom();
+        }
+        this._updateGroupInList(msg);
+    },
+
+    _appendGroupBubble(msg) {
+        const messagesEl = document.getElementById('chatMessages');
+        const emptyEl = messagesEl.querySelector('.chat-empty');
+        if (emptyEl) emptyEl.remove();
+        messagesEl.insertAdjacentHTML('beforeend', this._renderGroupBubble(msg, Auth.getUserId()));
+        lucide.createIcons();
+    },
+
+    _updateGroupInList(msg) {
+        const group = this.groups.find(g => g.groupId === msg.groupId);
+        if (group) {
+            group.lastMessage = msg.content;
+            group.lastTime = msg.createTime;
+            if (msg.senderId !== Auth.getUserId() && this.currentGroupId !== msg.groupId) {
+                group.unreadCount = (group.unreadCount || 0) + 1;
+            }
+            this.groups = [group, ...this.groups.filter(g => g.groupId !== msg.groupId)];
+            this.renderGroupList();
+        } else {
+            this.loadMyGroups();
+        }
+    },
+
+    _clearGroupUnread(groupId) {
+        const group = this.groups.find(g => g.groupId === groupId);
+        if (group) group.unreadCount = 0;
+        this.renderGroupList();
+    },
+
+    _markGroupRead(groupId) {
+        API.put(`/api/group/${groupId}/read`);
+        if (WebSocketManager && WebSocketManager.sendGroupReadNotification) {
+            WebSocketManager.sendGroupReadNotification(groupId);
+        }
+    },
+
+    scrollToBottom() {
+        const messagesEl = document.getElementById('chatMessages');
+        requestAnimationFrame(() => messagesEl.scrollTop = messagesEl.scrollHeight);
+    },
+
+    showGroupMembers() {
+        if (!this.currentGroupId) return;
+        if (typeof GroupMemberPanel !== 'undefined') {
+            GroupMemberPanel.show(this.currentGroupId, this.currentGroupInfo?.myRole || 0);
+        }
+    },
+
+    showGroupSettings() {
+        if (!this.currentGroupId) return;
+        if (typeof GroupSettingsModal !== 'undefined') {
+            GroupSettingsModal.show(this.currentGroupId);
+        }
+    }
+};

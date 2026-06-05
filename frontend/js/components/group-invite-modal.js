@@ -54,6 +54,14 @@ const GroupInviteModal = {
                         }
                     }
                 }
+                // 获取已是群成员的 ID，过滤掉
+                try {
+                    const membersRes = await API.get(`/api/group/${groupId}/members`);
+                    if (membersRes && membersRes.code === 200) {
+                        const existingIds = new Set((membersRes.data || []).map(m => m.userId));
+                        allFriends = allFriends.filter(f => !existingIds.has(f.friendId));
+                    }
+                } catch (e) { /* 忽略 */ }
                 renderFriendList(allFriends);
             }
         };

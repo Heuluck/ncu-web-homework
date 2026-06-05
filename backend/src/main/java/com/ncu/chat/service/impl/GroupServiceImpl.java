@@ -76,11 +76,23 @@ public class GroupServiceImpl implements GroupService {
             for (Long memberId : dto.getMemberIds()) {
                 if (!memberId.equals(userId)) {
                     addMember(group.getId(), memberId, 0);
+                    chatGroupMapper.incrementMemberCount(group.getId());
+                }
+            }
+
+            // WebSocket 通知被邀请的成员
+            for (Long memberId : dto.getMemberIds()) {
+                if (!memberId.equals(userId)) {
+                    Map<String, Object> wsEvent = new HashMap<>();
+                    wsEvent.put("type", "MEMBER_INVITED");
+                    wsEvent.put("groupId", group.getId());
+                    wsEvent.put("groupName", group.getName());
+                    wsEvent.put("userId", memberId);
+                    messagingTemplate.convertAndSendToUser(String.valueOf(memberId), "/queue/group_events", wsEvent);
                 }
             }
         }
 
-        chatGroupMapper.incrementMemberCount(group.getId());
         return convertToGroupVO(group, userId);
     }
 

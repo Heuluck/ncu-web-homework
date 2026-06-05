@@ -5,17 +5,12 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 @Data
-@TableName("group_message")
-public class GroupMessage {
+@TableName("group_bot")
+public class GroupBot {
     @TableId(type = IdType.AUTO)
     private Long id;
     private Long groupId;
-    private Long senderId;
     private Long botId;
-    private String content;
-    private Integer messageType;
-    private String fileUrl;
-    private Integer isRecall;
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;
 }

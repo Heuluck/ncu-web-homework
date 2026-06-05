@@ -28,6 +28,17 @@ mybatis-plus:
     map-underscore-to-camel-case: true
     log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
 
+# AI 机器人配置
+bot:
+  encryption:
+    secret: ncu-chat-bot-aes-256-secret-key-2026
+  rate-limit:
+    min-interval-ms: 3000
+    max-per-group-per-minute: 10
+  context:
+    max-messages: 5
+    max-chars-per-message: 200
+
 jwt:
   secret: your-256-bit-secret-key-here-change-in-production-ncu-chat-2026
   expiration: 86400000

@@ -36,3 +36,13 @@ file:
     path: ./uploads
     max-size: 50MB
     allowed-types: jpg,jpeg,png,gif,pdf,doc,docx,txt,mp3,wav,webm
+
+bot:
+  encryption:
+    secret: ncu-chat-bot-aes-256-secret-key-2026
+  rate-limit:
+    min-interval-ms: 3000
+    max-per-group-per-minute: 10
+  context:
+    max-messages: 20
+    max-chars-per-message: 200

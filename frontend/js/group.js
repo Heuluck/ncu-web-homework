@@ -101,6 +101,17 @@ const GroupManager = {
             this._renderGroupHeader();
         }
 
+        // 预加载群机器人列表和成员列表（供 @提及 弹窗使用）
+        if (typeof BotManager !== 'undefined') {
+            BotManager.loadGroupBots(groupId);
+        }
+        // 预加载群成员（异步不阻塞）
+        API.get(`/api/group/${groupId}/members`).then(res => {
+            if (res && res.code === 200) {
+                this.members = res.data || [];
+            }
+        }).catch(() => {});
+
         document.getElementById('chatInputArea').style.display = '';
         const messagesEl = document.getElementById('chatMessages');
         messagesEl.innerHTML = '<div class="chat-loading"><div class="spinner"></div></div>';
@@ -198,7 +209,11 @@ const GroupManager = {
 
     _renderGroupBubble(msg, myId) {
         const isSelf = msg.senderId === myId;
-        const avatarSrc = Utils.getAvatarUrl(msg.senderAvatar, `user-${msg.senderId}`);
+        const isBot = !!msg.botId;
+        const avatarSrc = isBot
+            ? (msg.botAvatar || BotManager.getDefaultBotAvatar(msg.botName || 'bot'))
+            : Utils.getAvatarUrl(msg.senderAvatar, `user-${msg.senderId}`);
+        const senderName = isBot ? `🤖 ${msg.botName || msg.senderNickname || 'AI'}` : (msg.senderNickname || '');
         const time = Utils.formatMessageTime(msg.createTime);
         const escapedContent = Utils.escapeHtml(msg.content);
 
@@ -241,10 +256,11 @@ const GroupManager = {
         }
 
         const isMedia = msg.messageType === 1 || msg.messageType === 2;
+        const botClass = isBot ? ' message-bot' : '';
         if (isSelf) {
-            return `<div class="message self"><div class="message-content">${skipBubble ? contentHtml : `<div class="message-bubble">${contentHtml}</div>`}<div class="message-meta"><span class="message-time">${time}</span></div></div></div>`;
+            return `<div class="message self${botClass}"><div class="message-content">${skipBubble ? contentHtml : `<div class="message-bubble">${contentHtml}</div>`}<div class="message-meta"><span class="message-time">${time}</span></div></div></div>`;
         } else {
-            return `<div class="message"><img src="${avatarSrc}" class="avatar avatar-sm"><div class="message-content"><div class="message-header"><span class="message-sender">${Utils.escapeHtml(msg.senderNickname)}</span><span class="message-time">${time}</span></div>${skipBubble ? contentHtml : `<div class="message-bubble">${contentHtml}</div>`}</div></div>`;
+            return `<div class="message${botClass}"><img src="${avatarSrc}" class="avatar avatar-sm" onerror="this.src='${BotManager.getDefaultBotAvatar('bot')}'"><div class="message-content"><div class="message-header"><span class="message-sender">${Utils.escapeHtml(senderName)}</span><span class="message-time">${time}</span></div>${skipBubble ? contentHtml : `<div class="message-bubble">${contentHtml}</div>`}</div></div>`;
         }
     },
 
@@ -481,6 +497,15 @@ const GroupManager = {
         if (!this.currentGroupId) return;
         if (typeof GroupSettingsModal !== 'undefined') {
             GroupSettingsModal.show(this.currentGroupId);
+        }
+    },
+
+    showBotManager() {
+        if (!this.currentGroupId) return;
+        if (typeof BotModal !== 'undefined') {
+            BotModal.show(this.currentGroupId);
+        } else {
+            Utils.showToast('机器人功能加载中', 'warning');
         }
     },
 

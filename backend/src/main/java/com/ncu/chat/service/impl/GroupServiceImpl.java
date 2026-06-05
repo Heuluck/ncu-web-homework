@@ -13,6 +13,7 @@ import com.ncu.chat.model.dto.UpdateGroupDTO;
 import com.ncu.chat.model.entity.*;
 import com.ncu.chat.model.vo.*;
 import com.ncu.chat.service.GroupService;
+import com.ncu.chat.service.AiBotService;
 import com.ncu.chat.websocket.WebSocketGroupController;
 import org.springframework.beans.BeanUtils;
 import org.springframework.context.annotation.Lazy;
@@ -31,22 +32,28 @@ public class GroupServiceImpl implements GroupService {
     private final GroupMemberMapper groupMemberMapper;
     private final GroupMessageMapper groupMessageMapper;
     private final UserMapper userMapper;
+    private final AiBotMapper aiBotMapper;
     private final WebSocketGroupController webSocketGroupController;
     private final SimpMessagingTemplate messagingTemplate;
+    private final AiBotService aiBotService;
 
     // 手动构造函数，添加 @Lazy 解决循环依赖
     public GroupServiceImpl(ChatGroupMapper chatGroupMapper,
                             GroupMemberMapper groupMemberMapper,
                             GroupMessageMapper groupMessageMapper,
                             UserMapper userMapper,
+                            AiBotMapper aiBotMapper,
                             @Lazy WebSocketGroupController webSocketGroupController,
-                            SimpMessagingTemplate messagingTemplate) {
+                            SimpMessagingTemplate messagingTemplate,
+                            @Lazy AiBotService aiBotService) {
         this.chatGroupMapper = chatGroupMapper;
         this.groupMemberMapper = groupMemberMapper;
         this.groupMessageMapper = groupMessageMapper;
         this.userMapper = userMapper;
+        this.aiBotMapper = aiBotMapper;
         this.webSocketGroupController = webSocketGroupController;
         this.messagingTemplate = messagingTemplate;
+        this.aiBotService = aiBotService;
     }
 
     // ==================== 群管理 ====================
@@ -369,6 +376,14 @@ public class GroupServiceImpl implements GroupService {
         vo.setIsSelf(true);
 
         webSocketGroupController.sendGroupMessage(vo);
+
+        // 异步检查机器人触发
+        try {
+            aiBotService.checkAndTriggerBots(dto.getGroupId(), userId, dto.getContent());
+        } catch (Exception e) {
+            System.err.println("[Bot] 触发检查失败: " + e.getMessage());
+        }
+
         return vo;
     }
 
@@ -388,15 +403,24 @@ public class GroupServiceImpl implements GroupService {
             vo.setId(msg.getId());
             vo.setGroupId(msg.getGroupId());
             vo.setSenderId(msg.getSenderId());
+            vo.setBotId(msg.getBotId());
             vo.setContent(msg.getContent());
             vo.setMessageType(msg.getMessageType());
             vo.setFileUrl(msg.getFileUrl());
             vo.setCreateTime(msg.getCreateTime());
             vo.setIsSelf(msg.getSenderId().equals(userId));
-            // 填充发送者信息
-            User sender = userMapper.selectById(msg.getSenderId());
-            vo.setSenderNickname(sender != null ? sender.getNickname() : "未知用户");
-            vo.setSenderAvatar(sender != null ? sender.getAvatar() : null);
+            // 填充发送者信息：优先使用机器人信息
+            if (msg.getBotId() != null) {
+                AiBot bot = aiBotMapper.selectById(msg.getBotId());
+                vo.setBotName(bot != null ? bot.getName() : "AI 机器人");
+                vo.setBotAvatar(bot != null ? bot.getAvatar() : null);
+                vo.setSenderNickname(bot != null ? bot.getName() : "AI 机器人");
+                vo.setSenderAvatar(bot != null ? bot.getAvatar() : null);
+            } else {
+                User sender = userMapper.selectById(msg.getSenderId());
+                vo.setSenderNickname(sender != null ? sender.getNickname() : "未知用户");
+                vo.setSenderAvatar(sender != null ? sender.getAvatar() : null);
+            }
             voList.add(vo);
         }
         Collections.reverse(voList);

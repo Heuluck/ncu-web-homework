@@ -220,6 +220,92 @@
     .list-item.blocked {
       opacity: 0.6;
     }
+    /* AI 机器人卡片 */
+    .bot-card {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--space-3) var(--space-2);
+      border-bottom: 1px solid var(--border-subtle);
+      transition: background var(--transition-fast);
+    }
+    .bot-card:last-child { border-bottom: none; }
+    .bot-card:hover { background: var(--bg-surface-hover); }
+    .bot-card-left {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      flex: 1;
+      min-width: 0;
+    }
+    .bot-card-info { flex: 1; min-width: 0; }
+    .bot-card-name {
+      font-size: var(--text-sm);
+      font-weight: var(--font-medium);
+      color: var(--text-main);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .bot-card-meta {
+      font-size: var(--text-xs);
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+    .bot-card-right { flex-shrink: 0; }
+    .bot-form { display: flex; flex-direction: column; gap: 0; }
+    .bot-form .form-group { margin-bottom: var(--space-4); }
+    .bot-advanced-settings summary {
+      list-style: none;
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      color: var(--text-muted);
+      font-size: var(--text-sm);
+      padding: var(--space-2) 0;
+    }
+    .bot-advanced-settings summary::-webkit-details-marker { display: none; }
+    .bot-advanced-settings[open] summary { margin-bottom: var(--space-2); }
+    .text-danger { color: var(--color-danger); }
+    .text-muted { color: var(--text-muted); }
+    /* 机器人消息气泡样式 */
+    .message.message-bot .message-bubble {
+      background: linear-gradient(135deg, #f0f7ff 0%, #e8f4fd 100%);
+      border: 1px solid #d0e3f7;
+    }
+    .message.message-bot .message-sender {
+      color: var(--color-primary);
+      font-weight: var(--font-semibold);
+    }
+    /* @提及弹出框 */
+    .at-mention-popup {
+      position: absolute;
+      bottom: 100%;
+      left: 16px;
+      right: 16px;
+      max-height: 200px;
+      overflow-y: auto;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-lg);
+      z-index: 100;
+      margin-bottom: 4px;
+    }
+    .at-mention-item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      padding: var(--space-2) var(--space-4);
+      cursor: pointer;
+      transition: background var(--transition-fast);
+      font-size: var(--text-sm);
+    }
+    .at-mention-item:hover,
+    .at-mention-item.active {
+      background: var(--bg-surface-hover);
+    }
+    .at-mention-item .avatar { width: 24px; height: 24px; }
   </style>
   <script src="https://unpkg.com/lucide@latest"></script>
 </head>
@@ -332,8 +418,8 @@
         <button class="btn-icon" id="voiceCallBtn" title="语音通话" onclick="var info=ChatManager.currentFriendInfo; CallManager.startCall(ChatManager.currentFriendId, info?info.nickname:'用户', document.getElementById('chatAvatar')?.src||'')">
           <i data-lucide="phone"></i>
         </button>
-        <button class="btn-icon" id="chatMoreBtn" title="查看更多">
-          <i data-lucide="more-vertical"></i>
+        <button class="btn-icon" id="chatMoreBtn" title="AI 机器人">
+          <i data-lucide="bot"></i>
         </button>
       </div>
     </div>
@@ -453,6 +539,8 @@
 <script src="js/components/group-member-panel.js"></script>
 <script src="js/components/group-settings-modal.js"></script>
 <script src="js/components/group-invite-modal.js"></script>
+<script src="js/bot.js"></script>
+<script src="js/components/bot-modal.js"></script>
 
 <script>
   // 认证检查
@@ -668,22 +756,109 @@
   const messageInput = document.getElementById('messageInput');
   const sendBtn = document.getElementById('sendBtn');
 
-  // 监听输入，将表情标记渲染为图片预览
+  // @提及弹出框状态
+  let atMentionActive = false;
+  let atMentionPopup = null;
+  let atMentionSelectedIdx = 0;
+  let atMentionItems = [];
+
+  function closeAtMention() {
+    atMentionActive = false;
+    if (atMentionPopup) { atMentionPopup.remove(); atMentionPopup = null; }
+    atMentionItems = [];
+    atMentionSelectedIdx = 0;
+  }
+
+  async function showAtMentionPopup(filter) {
+    if (!GroupManager.currentGroupId) { closeAtMention(); return; }
+    // 懒加载：如果机器人列表为空，尝试加载
+    if (!BotManager.groupBots || BotManager.groupBots.length === 0) {
+        await BotManager.loadGroupBots(GroupManager.currentGroupId);
+    }
+    const bots = BotManager.groupBots || [];
+    // 确保成员列表已加载
+    const members = (GroupManager.members && GroupManager.members.length > 0)
+        ? GroupManager.members.filter(m => m.userId !== Auth.getUserId())
+        : [];
+    let items = [];
+    bots.forEach(b => items.push({ type: 'bot', id: b.id, name: b.name, avatar: b.avatar || BotManager.getDefaultBotAvatar(b.name) }));
+    members.forEach(m => items.push({ type: 'member', id: m.userId, name: m.nickname, avatar: m.avatar || Utils.getAvatarUrl(null, 'user-' + m.userId) }));
+    if (filter) {
+      const f = filter.toLowerCase();
+      items = items.filter(i => i.name.toLowerCase().includes(f));
+    }
+    if (items.length === 0) { closeAtMention(); return; }
+    atMentionItems = items;
+    atMentionSelectedIdx = 0;
+
+    if (!atMentionPopup) {
+      atMentionPopup = document.createElement('div');
+      atMentionPopup.id = 'atMentionPopup';
+      atMentionPopup.className = 'at-mention-popup';
+      document.querySelector('.chat-input-area').appendChild(atMentionPopup);
+    }
+    renderAtMentionList();
+    atMentionActive = true;
+  }
+
+  function renderAtMentionList() {
+    if (!atMentionPopup) return;
+    atMentionPopup.innerHTML = atMentionItems.map((item, i) => {
+      const icon = item.type === 'bot' ? '🤖 ' : '';
+      return `<div class="at-mention-item ${i === atMentionSelectedIdx ? 'active' : ''}" data-idx="${i}">
+        <img src="${Utils.escapeHtml(item.avatar)}" class="avatar avatar-xs" onerror="this.src='${BotManager.getDefaultBotAvatar(item.name)}'">
+        <span>${icon}${Utils.escapeHtml(item.name)}</span>
+      </div>`;
+    }).join('');
+    atMentionPopup.querySelectorAll('.at-mention-item').forEach(el => {
+      el.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        selectAtMention(parseInt(el.dataset.idx));
+      });
+    });
+  }
+
+  function selectAtMention(idx) {
+    const item = atMentionItems[idx];
+    if (!item) return;
+    const input = messageInput;
+    const val = input.value;
+    const atPos = val.lastIndexOf('@');
+    if (atPos >= 0) {
+      input.value = val.substring(0, atPos) + '@' + item.name + ' ';
+    }
+    closeAtMention();
+    input.focus();
+  }
+
+  // 监听输入，将表情标记渲染为图片预览 + @提及检测
   let lastValue = '';
   messageInput.addEventListener('input', () => {
     const value = messageInput.value;
     // 检查是否包含表情标记
     if (value.includes('[emoji:') && value !== lastValue) {
-      // 将表情标记替换为图片显示（仅视觉，实际值不变）
       const displayValue = value.replace(/\[emoji:([^\]]+):([^\]]+)\]/g, '🖼️$1');
       console.log('[表情] 输入内容:', value);
     }
     lastValue = value;
+    // @提及检测
+    const cursorPos = messageInput.selectionStart;
+    const textBeforeCursor = value.substring(0, cursorPos);
+    const atMatch = textBeforeCursor.match(/@([^@\s]*)$/);
+    if (atMatch && GroupManager.currentGroupId) {
+      showAtMentionPopup(atMatch[1]);
+    } else {
+      closeAtMention();
+    }
   });
 
-  // 聊天头部更多按钮（好友操作：拉黑/删除）
+  // 聊天头部更多按钮（群聊：AI 机器人管理 / 好友：拉黑/删除）
   document.getElementById('chatMoreBtn')?.addEventListener('click', (e) => {
-    ChatManager.showChatMenu(e);
+    if (GroupManager.currentGroupId) {
+      GroupManager.showBotManager();
+    } else {
+      ChatManager.showChatMenu(e);
+    }
   });
 
   // 修改发送逻辑：支持群聊和私聊
@@ -697,8 +872,25 @@
 
   messageInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
+      if (atMentionActive && atMentionItems.length > 0) {
+        e.preventDefault();
+        selectAtMention(atMentionSelectedIdx);
+        return;
+      }
       e.preventDefault();
       handleSendMessage();
+    } else if (atMentionActive) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        atMentionSelectedIdx = (atMentionSelectedIdx + 1) % atMentionItems.length;
+        renderAtMentionList();
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        atMentionSelectedIdx = (atMentionSelectedIdx - 1 + atMentionItems.length) % atMentionItems.length;
+        renderAtMentionList();
+      } else if (e.key === 'Escape') {
+        closeAtMention();
+      }
     }
   });
 
@@ -927,7 +1119,13 @@
     
     let html = '';
     messages.forEach(msg => {
-      const avatarSrc = Utils.getAvatarUrl(msg.senderAvatar, `user-${msg.senderId}`);
+      const isBot = !!msg.botId;
+      const avatarSrc = isBot
+        ? (msg.botAvatar || (typeof BotManager !== 'undefined' ? BotManager.getDefaultBotAvatar(msg.botName || 'bot') : msg.senderAvatar))
+        : Utils.getAvatarUrl(msg.senderAvatar, `user-${msg.senderId}`);
+      const senderName = isBot
+        ? `🤖 ${msg.botName || msg.senderNickname || 'AI'}`
+        : Utils.escapeHtml(msg.senderNickname);
       const time = Utils.formatMessageTime(msg.createTime);
       let contentHtml = '';
       
@@ -960,11 +1158,11 @@
       
       html += `
         <div class="chat-history-item">
-          <img src="${avatarSrc}" alt="头像" class="avatar avatar-sm chat-history-avatar">
+          <img src="${avatarSrc}" alt="头像" class="avatar avatar-sm chat-history-avatar" onerror="this.src='${typeof BotManager !== 'undefined' ? BotManager.getDefaultBotAvatar('bot') : avatarSrc}'">
           <div class="chat-history-content">
             ${contentHtml}
             <div class="chat-history-meta">
-              <span>${Utils.escapeHtml(msg.senderNickname)}</span>
+              <span>${senderName}</span>
               <span class="chat-history-time">${time}</span>
             </div>
           </div>

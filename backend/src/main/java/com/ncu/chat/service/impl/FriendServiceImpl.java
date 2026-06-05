@@ -107,6 +107,9 @@ public class FriendServiceImpl implements FriendService {
             existing.setReceiverId(dto.getFriendId());
             existing.setRequesterGroupId(dto.getGroupId());
             friendshipMapper.updateById(existing);
+
+            // WebSocket 通知接收者有新的好友申请
+            pushFriendRequestNotification(requesterId, dto.getFriendId(), existing);
             return;
         }
 
@@ -117,6 +120,21 @@ public class FriendServiceImpl implements FriendService {
         friendship.setVerificationMessage(dto.getVerificationMessage());
         friendship.setRequesterGroupId(dto.getGroupId());
         friendshipMapper.insert(friendship);
+
+        // WebSocket 通知接收者有新的好友申请
+        pushFriendRequestNotification(requesterId, dto.getFriendId(), friendship);
+    }
+
+    /**
+     * 通过 WebSocket 向接收者推送好友申请通知
+     */
+    private void pushFriendRequestNotification(Long requesterId, Long receiverId, Friendship friendship) {
+        FriendRequestVO vo = convertToRequestVO(friendship, requesterId);
+        messagingTemplate.convertAndSendToUser(
+                String.valueOf(receiverId),
+                "/queue/friend-request",
+                vo
+        );
     }
 
     @Override

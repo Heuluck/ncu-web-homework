@@ -836,6 +836,30 @@ const FriendManager = {
         this._closeContextMenu();
     },
 
+    // WebSocket 实时接收好友申请
+    onNewFriendRequest(data) {
+        // data 是 FriendRequestVO: { friendshipId, userId, username, nickname, avatar, onlineStatus, verificationMessage, createTime }
+        this.pendingCount++;
+        this._updateRequestBadge();
+        // 如果好友申请弹窗已打开，刷新列表
+        const modal = document.getElementById('requestsModal');
+        if (modal && modal._received) {
+            modal._received.unshift(data);
+            const activeTab = document.querySelector('.request-tab.active');
+            if (activeTab && activeTab.dataset.rtab === 'received') {
+                document.getElementById('requestsModalBody').innerHTML = this._renderRequestList('received', modal._received);
+                lucide.createIcons();
+            }
+            // 更新 tab 标题上的数字
+            const receivedTab = document.querySelector('.request-tab[data-rtab="received"]');
+            if (receivedTab && modal._received.length > 0) {
+                receivedTab.innerHTML = `收到的申请 <span class="badge" style="margin-left:4px;">${modal._received.length}</span>`;
+            }
+        }
+        // Toast 提示
+        Utils.showToast(`${data.nickname || data.username} 发来好友申请`, 'info');
+    },
+
     // WebSocket 实时同步拉黑状态
     onBlockStatusChange(data) {
         const myId = Auth.getUserId();

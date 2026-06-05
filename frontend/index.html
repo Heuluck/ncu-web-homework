@@ -508,6 +508,13 @@
     }
   });
 
+  // 好友申请实时通知（WebSocket 推送）
+  WebSocketManager.onFriendRequest((data) => {
+    if (typeof FriendManager !== 'undefined') {
+      FriendManager.onNewFriendRequest(data);
+    }
+  });
+
   WebSocketManager.connect();
   ConversationManager.loadConversations();
   // 启动时加载好友数据（供聊天头部菜单使用）+ 检查待处理申请

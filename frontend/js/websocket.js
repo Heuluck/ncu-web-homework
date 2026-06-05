@@ -15,6 +15,7 @@ const WebSocketManager = {
   _groupMessageCallbacks: [],  // 群聊消息回调数组
   _voiceMessageCallbacks: [],  // 语音消息回调数组
   _callSignalCallbacks: [],    // 通话信令回调数组
+  _friendRequestCallbacks: [], // 好友申请回调数组
 
   connect() {
     const token = Auth.getToken();
@@ -120,6 +121,18 @@ const WebSocketManager = {
         console.error('[WS] 通话信令解析失败:', e);
       }
     });
+
+    // 好友申请实时通知
+    this.stompClient.subscribe('/user/queue/friend-request', (message) => {
+      try {
+        const data = JSON.parse(message.body);
+        if (this._friendRequestCallbacks) {
+          this._friendRequestCallbacks.forEach(cb => cb(data));
+        }
+      } catch (e) {
+        console.error('[WS] 好友申请解析失败:', e);
+      }
+    });
   },
 
   sendMessage(to, content, messageType = 0, fileUrl = null) {
@@ -156,6 +169,11 @@ const WebSocketManager = {
   // 注册通话信令回调
   onCallSignal(cb) {
     this._callSignalCallbacks.push(cb);
+  },
+
+  // 注册好友申请回调
+  onFriendRequest(cb) {
+    this._friendRequestCallbacks.push(cb);
   },
 
   // 发送群聊消息

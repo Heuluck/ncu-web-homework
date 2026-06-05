@@ -5,6 +5,9 @@
 - **技术栈**：Spring Boot 3.x + HTML/CSS/JS + MySQL 8.0
 - **架构**：MVC 分层（Controller → Service → Mapper）
 
+## 重要信息
+前端代码严禁修改backend/target/classes下的文件！这些是编译输出，修改会被覆盖。前端资源请放在backend/src/main/resources/static/目录下。
+
 ## Git 规范
 - **分支命名**：`feat|fix|refactor/<功能描述>`（如 `feature/user-auth`、`feature/chat-private`）
 - **提交格式**：`feat: xxx` / `fix: xxx` / `docs: xxx`

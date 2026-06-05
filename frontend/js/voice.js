@@ -86,6 +86,8 @@ const VoiceManager = {
 
       this.mediaRecorder.start();
       this.recordStartTime = Date.now();
+      // 播放录音提示音
+      this._playSound('/record.mp3');
       // 先显示 UI（创建计时器元素），再启动计时器
       this._showRecordingUI(true);
       this._startTimer();
@@ -349,5 +351,13 @@ const VoiceManager = {
     if (show) {
       lucide.createIcons();
     }
+  },
+
+  _playSound(src) {
+    try {
+      const audio = new Audio(src);
+      audio.volume = 0.5;
+      audio.play().catch(() => {});
+    } catch (_) {}
   }
 };

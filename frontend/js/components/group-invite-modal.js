@@ -1,5 +1,8 @@
 const GroupInviteModal = {
     show(groupId, onSuccess) {
+        // 先关闭已有的邀请面板
+        document.getElementById('groupInviteModal')?.remove();
+
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
         modal.id = 'groupInviteModal';

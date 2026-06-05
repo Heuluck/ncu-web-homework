@@ -45,15 +45,18 @@ const GroupManager = {
         let html = '';
         for (const group of this.groups) {
             const isActive = this.currentGroupId === group.groupId;
-            const avatarSrc = Utils.getAvatarUrl(group.groupAvatar, `group-${group.groupId}`);
             const unreadBadge = group.unreadCount > 0
                 ? `<span class="badge">${group.unreadCount > 99 ? '99+' : group.unreadCount}</span>`
                 : '';
+            // 群头像：有图用图，无图用群名首字
+            const avatarHtml = group.groupAvatar
+                ? `<img src="${Utils.escapeHtml(group.groupAvatar)}" class="avatar avatar-md">`
+                : `<div class="avatar avatar-md" style="background:var(--color-primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:600;">${Utils.escapeHtml((group.groupName || '?')[0])}</div>`;
 
             html += `
                 <div class="list-item ${isActive ? 'active' : ''}" data-group-id="${group.groupId}">
                     <div class="avatar-wrapper">
-                        <img src="${avatarSrc}" class="avatar avatar-md">
+                        ${avatarHtml}
                     </div>
                     <div class="list-item-content">
                         <div class="list-item-header">
@@ -373,6 +376,69 @@ const GroupManager = {
         const group = this.groups.find(g => g.groupId === groupId);
         if (group) group.unreadCount = 0;
         this.renderGroupList();
+    },
+
+    // 处理群事件（解散、移除成员、邀请等）
+    async onGroupEvent(data) {
+        if (data.type === 'GROUP_DISBAND') {
+            Utils.showToast(`群聊「${data.groupName || ''}」已被解散`, 'info');
+            // 如果当前正在该群，清空聊天区
+            if (this.currentGroupId === data.groupId) {
+                this.currentGroupId = null;
+                this.currentGroupInfo = null;
+                document.getElementById('chatHeader').style.display = 'none';
+                document.getElementById('chatInputArea').style.display = 'none';
+                document.getElementById('chatMessages').innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon"><i data-lucide="message-square"></i></div>
+                        <div class="empty-state-title">群聊已解散</div>
+                    </div>`;
+                lucide.createIcons();
+            }
+            // 从列表移除并刷新
+            this.groups = this.groups.filter(g => g.groupId !== data.groupId);
+            this.renderGroupList();
+            if (typeof ConversationManager !== 'undefined') {
+                ConversationManager.loadConversations();
+            }
+        } else if (data.type === 'MEMBER_INVITED') {
+            // 被邀请加入群聊，刷新群列表和会话列表
+            Utils.showToast(`你被邀请加入群聊「${data.groupName || ''}」`, 'info');
+            await this.loadMyGroups();
+            if (typeof ConversationManager !== 'undefined') {
+                ConversationManager.loadConversations();
+            }
+        } else if (data.type === 'MEMBER_REMOVED') {
+            const myId = Auth.getUserId();
+            if (data.userId === myId) {
+                Utils.showToast(`你已被移出群聊「${data.groupName || ''}」`, 'info');
+                // 如果当前正在该群，清空聊天区
+                if (this.currentGroupId === data.groupId) {
+                    this.currentGroupId = null;
+                    this.currentGroupInfo = null;
+                    document.getElementById('chatHeader').style.display = 'none';
+                    document.getElementById('chatInputArea').style.display = 'none';
+                    document.getElementById('chatMessages').innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-state-icon"><i data-lucide="message-square"></i></div>
+                            <div class="empty-state-title">你已被移出该群聊</div>
+                        </div>`;
+                    lucide.createIcons();
+                }
+                this.groups = this.groups.filter(g => g.groupId !== data.groupId);
+                this.renderGroupList();
+                if (typeof ConversationManager !== 'undefined') {
+                    ConversationManager.loadConversations();
+                }
+            }
+            // 如果当前在该群，刷新成员面板（如果打开的话）
+            if (this.currentGroupId === data.groupId) {
+                const memberModal = document.getElementById('groupMemberPanelModal');
+                if (memberModal && typeof GroupMemberPanel !== 'undefined') {
+                    GroupMemberPanel.show(data.groupId, this.currentGroupInfo?.myRole || 0);
+                }
+            }
+        }
     },
 
     _markGroupRead(groupId) {

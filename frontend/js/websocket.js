@@ -133,7 +133,17 @@ const WebSocketManager = {
         console.error('[WS] 好友申请解析失败:', e);
       }
     });
-  },
+    // 群事件订阅（解散、移除成员等）
+    this.stompClient.subscribe('/user/queue/group_events', (message) => {
+      try {
+        const data = JSON.parse(message.body);
+        if (typeof GroupManager !== 'undefined') {
+          GroupManager.onGroupEvent(data);
+        }
+      } catch (e) {
+        console.error('[WS] 群事件解析失败:', e);
+      }
+    });  },
 
   sendMessage(to, content, messageType = 0, fileUrl = null) {
     if (!this.stompClient || !this.connected) {

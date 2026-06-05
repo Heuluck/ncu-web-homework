@@ -16,6 +16,7 @@ import com.ncu.chat.service.GroupService;
 import com.ncu.chat.websocket.WebSocketGroupController;
 import org.springframework.beans.BeanUtils;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,18 +32,21 @@ public class GroupServiceImpl implements GroupService {
     private final GroupMessageMapper groupMessageMapper;
     private final UserMapper userMapper;
     private final WebSocketGroupController webSocketGroupController;
+    private final SimpMessagingTemplate messagingTemplate;
 
     // 手动构造函数，添加 @Lazy 解决循环依赖
     public GroupServiceImpl(ChatGroupMapper chatGroupMapper,
                             GroupMemberMapper groupMemberMapper,
                             GroupMessageMapper groupMessageMapper,
                             UserMapper userMapper,
-                            @Lazy WebSocketGroupController webSocketGroupController) {
+                            @Lazy WebSocketGroupController webSocketGroupController,
+                            SimpMessagingTemplate messagingTemplate) {
         this.chatGroupMapper = chatGroupMapper;
         this.groupMemberMapper = groupMemberMapper;
         this.groupMessageMapper = groupMessageMapper;
         this.userMapper = userMapper;
         this.webSocketGroupController = webSocketGroupController;
+        this.messagingTemplate = messagingTemplate;
     }
 
     // ==================== 群管理 ====================
@@ -119,6 +123,9 @@ public class GroupServiceImpl implements GroupService {
             throw new BusinessException("只有群主可以解散群聊");
         }
 
+        // 先查出所有成员 ID（软删除前查，否则查不到）
+        List<Long> memberIds = groupMemberMapper.getUserIdsByGroupId(groupId);
+
         // 使用 LambdaUpdateWrapper 强制更新 deleted = 1
         LambdaUpdateWrapper<ChatGroup> groupWrapper = new LambdaUpdateWrapper<>();
         groupWrapper.eq(ChatGroup::getId, groupId)
@@ -130,6 +137,16 @@ public class GroupServiceImpl implements GroupService {
         memberWrapper.eq(GroupMember::getGroupId, groupId)
                 .set(GroupMember::getDeleted, 1);
         groupMemberMapper.update(null, memberWrapper);
+
+        // WebSocket 通知所有成员群已解散
+        Map<String, Object> event = new HashMap<>();
+        event.put("type", "GROUP_DISBAND");
+        event.put("groupId", groupId);
+        event.put("groupName", group.getName());
+        for (Long memberId : memberIds) {
+            if (memberId.equals(userId)) continue; // 不通知操作者自己
+            messagingTemplate.convertAndSendToUser(String.valueOf(memberId), "/queue/group_events", event);
+        }
     }
 
     @Override
@@ -209,10 +226,19 @@ public class GroupServiceImpl implements GroupService {
         if (current == null || current.getRole() < 1) {
             throw new BusinessException("无权限");
         }
+        ChatGroup group = chatGroupMapper.selectById(groupId);
         for (Long targetId : memberIds) {
             if (getMember(groupId, targetId) != null) continue;
             addMember(groupId, targetId, 0);
             chatGroupMapper.incrementMemberCount(groupId);
+
+            // WebSocket 通知被邀请者
+            Map<String, Object> event = new HashMap<>();
+            event.put("type", "MEMBER_INVITED");
+            event.put("groupId", groupId);
+            event.put("groupName", group != null ? group.getName() : "");
+            event.put("userId", targetId);
+            messagingTemplate.convertAndSendToUser(String.valueOf(targetId), "/queue/group_events", event);
         }
     }
 
@@ -238,6 +264,15 @@ public class GroupServiceImpl implements GroupService {
                 .set(GroupMember::getDeleted, 1);
         groupMemberMapper.update(null, wrapper);
         chatGroupMapper.decrementMemberCount(groupId);
+
+        // WebSocket 通知被移除的成员
+        ChatGroup group = chatGroupMapper.selectById(groupId);
+        Map<String, Object> event = new HashMap<>();
+        event.put("type", "MEMBER_REMOVED");
+        event.put("groupId", groupId);
+        event.put("groupName", group != null ? group.getName() : "");
+        event.put("userId", targetUserId);
+        messagingTemplate.convertAndSendToUser(String.valueOf(targetUserId), "/queue/group_events", event);
     }
 
     @Override
@@ -369,6 +404,9 @@ public class GroupServiceImpl implements GroupService {
     }
 
     private void addMember(Long groupId, Long userId, Integer role) {
+        // 先物理删除已软删除的旧记录，避免唯一键冲突
+        groupMemberMapper.deleteSoftDeleted(groupId, userId);
+
         GroupMember member = new GroupMember();
         member.setGroupId(groupId);
         member.setUserId(userId);

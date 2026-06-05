@@ -175,6 +175,7 @@ const FriendManager = {
                 </div>
             </div>`;
         document.body.appendChild(overlay);
+        overlay.addEventListener('click', (e) => { if (e.target === overlay) this.closeSearchModal(); });
         lucide.createIcons();
         setTimeout(() => document.getElementById('searchKeyword')?.focus(), 100);
     },
@@ -305,6 +306,7 @@ const FriendManager = {
                 </div>
             </div>`;
         document.body.appendChild(overlay);
+        overlay.addEventListener('click', (e) => { if (e.target === overlay) this.closeRequestsModal(); });
         // 存储数据以便 tab 切换
         overlay._received = received;
         overlay._sent = sent;
@@ -588,6 +590,7 @@ const FriendManager = {
                 </div>
             </div>`;
         document.body.appendChild(overlay);
+        overlay.addEventListener('click', (e) => { if (e.target === overlay) this.closeMoveFriendModal(); });
         lucide.createIcons();
     },
 
@@ -650,6 +653,7 @@ const FriendManager = {
                 </div>
             </div>`;
         document.body.appendChild(overlay);
+        overlay.addEventListener('click', (e) => { if (e.target === overlay) this.closeProfileModal(); });
         lucide.createIcons();
     },
 
@@ -682,6 +686,7 @@ const FriendManager = {
                 </div>
             </div>`;
         document.body.appendChild(overlay);
+        overlay.addEventListener('click', (e) => { if (e.target === overlay) this.closeGroupManageModal(); });
         lucide.createIcons();
     },
 

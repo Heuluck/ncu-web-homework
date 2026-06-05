@@ -8,6 +8,9 @@ public class GroupMessageVO {
     private Long id;
     private Long groupId;
     private Long senderId;
+    private Long botId;
+    private String botName;
+    private String botAvatar;
     private String senderNickname;
     private String senderAvatar;
     private String content;

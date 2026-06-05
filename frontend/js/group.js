@@ -17,6 +17,10 @@ const GroupManager = {
         if (res && res.code === 200) {
             this.groups = res.data || [];
             this.renderGroupList();
+            // 同步到最近会话列表
+            if (typeof ConversationManager !== 'undefined') {
+                ConversationManager.loadConversations();
+            }
         }
     },
 
@@ -41,15 +45,18 @@ const GroupManager = {
         let html = '';
         for (const group of this.groups) {
             const isActive = this.currentGroupId === group.groupId;
-            const avatarSrc = Utils.getAvatarUrl(group.groupAvatar, `group-${group.groupId}`);
             const unreadBadge = group.unreadCount > 0
                 ? `<span class="badge">${group.unreadCount > 99 ? '99+' : group.unreadCount}</span>`
                 : '';
+            // 群头像：有图用图，无图用群名首字
+            const avatarHtml = group.groupAvatar
+                ? `<img src="${Utils.escapeHtml(group.groupAvatar)}" class="avatar avatar-md">`
+                : `<div class="avatar avatar-md" style="background:var(--color-primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:600;">${Utils.escapeHtml((group.groupName || '?')[0])}</div>`;
 
             html += `
                 <div class="list-item ${isActive ? 'active' : ''}" data-group-id="${group.groupId}">
                     <div class="avatar-wrapper">
-                        <img src="${avatarSrc}" class="avatar avatar-md">
+                        ${avatarHtml}
                     </div>
                     <div class="list-item-content">
                         <div class="list-item-header">
@@ -83,8 +90,10 @@ const GroupManager = {
         // 显示群聊头部按钮
         const membersBtn = document.getElementById('groupMembersBtn');
         const settingsBtn = document.getElementById('groupSettingsBtn');
+        const callBtn = document.getElementById('voiceCallBtn');
         if (membersBtn) membersBtn.style.display = 'inline-flex';
         if (settingsBtn) settingsBtn.style.display = 'inline-flex';
+        if (callBtn) callBtn.style.display = 'none'; // 群聊隐藏语音通话
 
         const infoRes = await API.get(`/api/group/info/${groupId}`);
         if (infoRes && infoRes.code === 200) {
@@ -99,12 +108,33 @@ const GroupManager = {
         await this.loadGroupMessages(groupId, 1, true);
         this._markGroupRead(groupId);
         this._clearGroupUnread(groupId);
+        // 清除最近会话列表中的群聊未读
+        if (typeof ConversationManager !== 'undefined') {
+            ConversationManager.clearGroupUnread(groupId);
+            ConversationManager.refreshMuteBtn();
+        }
     },
 
     _renderGroupHeader() {
         if (!this.currentGroupInfo) return;
         document.getElementById('chatHeader').style.display = '';
-        document.getElementById('chatAvatar').src = Utils.getAvatarUrl(this.currentGroupInfo.avatar, `group-${this.currentGroupInfo.id}`);
+        const avatarEl = document.getElementById('chatAvatar');
+        if (this.currentGroupInfo.avatar) {
+            avatarEl.src = this.currentGroupInfo.avatar;
+            avatarEl.style.display = '';
+        } else {
+            // 无头像时用群名首字
+            avatarEl.style.display = 'none';
+            const wrapper = avatarEl.parentElement;
+            let letterEl = wrapper.querySelector('.group-letter-avatar');
+            if (!letterEl) {
+                letterEl = document.createElement('div');
+                letterEl.className = 'avatar avatar-md group-letter-avatar';
+                letterEl.style.cssText = 'background:var(--color-primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:600;';
+                wrapper.insertBefore(letterEl, avatarEl);
+            }
+            letterEl.textContent = (this.currentGroupInfo.name || '?')[0];
+        }
         document.getElementById('chatName').textContent = this.currentGroupInfo.name;
         document.getElementById('chatStatusText').textContent = `${this.currentGroupInfo.memberCount || 0} 人`;
     },
@@ -173,6 +203,7 @@ const GroupManager = {
         const escapedContent = Utils.escapeHtml(msg.content);
 
         let contentHtml = '';
+        let skipBubble = false;
         const messageType = msg.messageType || 0;
 
         if (messageType === 1) {
@@ -190,13 +221,15 @@ const GroupManager = {
                 contentHtml = `<span style="font-size: 28px;vertical-align:middle;">${fileUrl}</span>`;
             } else if (fileUrl) {
                 // 普通图片 - 点击弹出预览
-                contentHtml = `<img src="${msg.fileUrl}" alt="图片" class="message-image" onclick="GroupManager.showImagePreview('${msg.fileUrl}')">`;
+                skipBubble = true;
+                contentHtml = `<div class="message-image-wrap" onclick="GroupManager.showImagePreview('${msg.fileUrl}')"><img src="${msg.fileUrl}" alt="图片" class="message-image"><div class="image-overlay"><div class="image-overlay-icon"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1-2-2h6"/></svg></div></div></div>`;
             } else {
                 contentHtml = `<div class="message-text">${escapedContent}</div>`;
             }
         } else if (messageType === 2) {
             // 文件消息
-            contentHtml = `<a href="${msg.fileUrl}" target="_blank" class="message-file">📎 ${escapedContent}</a>`;
+            skipBubble = true;
+            contentHtml = `<a href="${msg.fileUrl}" target="_blank" class="message-file-card"><div class="file-icon"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></svg></div><div class="file-info"><div class="file-name">${escapedContent}</div><div class="file-meta">文件</div></div><div class="file-download"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg></div></a>`;
         } else if (messageType === 3) {
             // 语音消息
             contentHtml = (typeof VoiceManager !== 'undefined' && VoiceManager.renderVoiceBubble)
@@ -207,10 +240,11 @@ const GroupManager = {
             contentHtml = `<div class="message-text">${escapedContent}</div>`;
         }
 
+        const isMedia = msg.messageType === 1 || msg.messageType === 2;
         if (isSelf) {
-            return `<div class="message self"><div class="message-content"><div class="message-bubble">${contentHtml}</div><div class="message-meta"><span class="message-time">${time}</span></div></div></div>`;
+            return `<div class="message self"><div class="message-content">${skipBubble ? contentHtml : `<div class="message-bubble">${contentHtml}</div>`}<div class="message-meta"><span class="message-time">${time}</span></div></div></div>`;
         } else {
-            return `<div class="message"><img src="${avatarSrc}" class="avatar avatar-sm"><div class="message-content"><div class="message-header"><span class="message-sender">${Utils.escapeHtml(msg.senderNickname)}</span><span class="message-time">${time}</span></div><div class="message-bubble">${contentHtml}</div></div></div>`;
+            return `<div class="message"><img src="${avatarSrc}" class="avatar avatar-sm"><div class="message-content"><div class="message-header"><span class="message-sender">${Utils.escapeHtml(msg.senderNickname)}</span><span class="message-time">${time}</span></div>${skipBubble ? contentHtml : `<div class="message-bubble">${contentHtml}</div>`}</div></div>`;
         }
     },
 
@@ -314,6 +348,10 @@ const GroupManager = {
             this.scrollToBottom();
         }
         this._updateGroupInList(msg);
+        // 同步到最近会话列表
+        if (typeof ConversationManager !== 'undefined') {
+            ConversationManager.addOrUpdateGroupConversation(msg);
+        }
     },
 
     _appendGroupBubble(msg) {
@@ -322,12 +360,24 @@ const GroupManager = {
         if (emptyEl) emptyEl.remove();
         messagesEl.insertAdjacentHTML('beforeend', this._renderGroupBubble(msg, Auth.getUserId()));
         lucide.createIcons();
+
+        // 图片消息：等图片加载完成后再置底
+        const img = messagesEl.querySelector('.message:last-child .message-image');
+        if (img) {
+            if (img.complete) {
+                this.scrollToBottom();
+            } else {
+                img.onload = () => this.scrollToBottom();
+            }
+        }
     },
 
     _updateGroupInList(msg) {
         const group = this.groups.find(g => g.groupId === msg.groupId);
         if (group) {
-            group.lastMessage = msg.content;
+            // emoji 表情消息：显示表情符号而非名称
+            const isEmoji = msg.messageType === 1 && msg.fileUrl && msg.fileUrl.length <= 10;
+            group.lastMessage = isEmoji ? msg.fileUrl : msg.content;
             group.lastTime = msg.createTime;
             if (msg.senderId !== Auth.getUserId() && this.currentGroupId !== msg.groupId) {
                 group.unreadCount = (group.unreadCount || 0) + 1;
@@ -343,6 +393,69 @@ const GroupManager = {
         const group = this.groups.find(g => g.groupId === groupId);
         if (group) group.unreadCount = 0;
         this.renderGroupList();
+    },
+
+    // 处理群事件（解散、移除成员、邀请等）
+    async onGroupEvent(data) {
+        if (data.type === 'GROUP_DISBAND') {
+            Utils.showToast(`群聊「${data.groupName || ''}」已被解散`, 'info');
+            // 如果当前正在该群，清空聊天区
+            if (this.currentGroupId === data.groupId) {
+                this.currentGroupId = null;
+                this.currentGroupInfo = null;
+                document.getElementById('chatHeader').style.display = 'none';
+                document.getElementById('chatInputArea').style.display = 'none';
+                document.getElementById('chatMessages').innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon"><i data-lucide="message-square"></i></div>
+                        <div class="empty-state-title">群聊已解散</div>
+                    </div>`;
+                lucide.createIcons();
+            }
+            // 从列表移除并刷新
+            this.groups = this.groups.filter(g => g.groupId !== data.groupId);
+            this.renderGroupList();
+            if (typeof ConversationManager !== 'undefined') {
+                ConversationManager.loadConversations();
+            }
+        } else if (data.type === 'MEMBER_INVITED') {
+            // 被邀请加入群聊，刷新群列表和会话列表
+            Utils.showToast(`你被邀请加入群聊「${data.groupName || ''}」`, 'info');
+            await this.loadMyGroups();
+            if (typeof ConversationManager !== 'undefined') {
+                ConversationManager.loadConversations();
+            }
+        } else if (data.type === 'MEMBER_REMOVED') {
+            const myId = Auth.getUserId();
+            if (data.userId === myId) {
+                Utils.showToast(`你已被移出群聊「${data.groupName || ''}」`, 'info');
+                // 如果当前正在该群，清空聊天区
+                if (this.currentGroupId === data.groupId) {
+                    this.currentGroupId = null;
+                    this.currentGroupInfo = null;
+                    document.getElementById('chatHeader').style.display = 'none';
+                    document.getElementById('chatInputArea').style.display = 'none';
+                    document.getElementById('chatMessages').innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-state-icon"><i data-lucide="message-square"></i></div>
+                            <div class="empty-state-title">你已被移出该群聊</div>
+                        </div>`;
+                    lucide.createIcons();
+                }
+                this.groups = this.groups.filter(g => g.groupId !== data.groupId);
+                this.renderGroupList();
+                if (typeof ConversationManager !== 'undefined') {
+                    ConversationManager.loadConversations();
+                }
+            }
+            // 如果当前在该群，刷新成员面板（如果打开的话）
+            if (this.currentGroupId === data.groupId) {
+                const memberModal = document.getElementById('groupMemberPanelModal');
+                if (memberModal && typeof GroupMemberPanel !== 'undefined') {
+                    GroupMemberPanel.show(data.groupId, this.currentGroupInfo?.myRole || 0);
+                }
+            }
+        }
     },
 
     _markGroupRead(groupId) {

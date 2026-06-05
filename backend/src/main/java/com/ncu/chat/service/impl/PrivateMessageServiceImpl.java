@@ -197,8 +197,17 @@ public class PrivateMessageServiceImpl implements PrivateMessageService {
             vo.setNickname(friend != null ? friend.getNickname() : "未知用户");
             vo.setAvatar(friend != null ? friend.getAvatar() : null);
             vo.setOnlineStatus(friend != null ? friend.getStatus() : 0);
-            vo.setLastMessage(lastMsg.getContent());
-            vo.setLastMessageType(getMessageTypeText(lastMsg.getMessageType()));
+
+            // emoji 表情消息：显示表情符号而非 [图片]
+            if (lastMsg.getMessageType() != null && lastMsg.getMessageType() == 1
+                    && lastMsg.getFileUrl() != null && lastMsg.getFileUrl().length() <= 10) {
+                vo.setLastMessage(lastMsg.getFileUrl());
+                vo.setLastMessageType("");
+            } else {
+                vo.setLastMessage(lastMsg.getContent());
+                vo.setLastMessageType(getMessageTypeText(lastMsg.getMessageType()));
+            }
+
             vo.setLastTime(lastMsg.getCreateTime());
             vo.setUnreadCount(unreadCount.intValue());
 
@@ -238,6 +247,7 @@ public class PrivateMessageServiceImpl implements PrivateMessageService {
             case 1: return "[图片]";
             case 2: return "[文件]";
             case 3: return "[语音]";
+            case 4: return "[语音通话]";
             default: return "";
         }
     }

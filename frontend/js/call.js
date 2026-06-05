@@ -323,15 +323,26 @@ const CallManager = {
     }
     if (this.remoteAudio) { this.remoteAudio.remove(); this.remoteAudio = null; }
 
-    setTimeout(() => {
-      const el = document.getElementById('call-overlay');
-      if (el) el.remove();
-    }, 2000);
-
+    // 立即更新 overlay 文案，移除操作按钮
     if (message) {
+      const el = document.getElementById('call-overlay');
+      if (el) {
+        const statusEl = el.querySelector('.call-status');
+        if (statusEl) { statusEl.textContent = message; statusEl.style.display = ''; }
+        const timerEl = el.querySelector('.call-timer');
+        if (timerEl) timerEl.style.display = 'none';
+        const actionsEl = el.querySelector('.call-actions');
+        if (actionsEl) actionsEl.style.display = 'none';
+      }
       const durationText = callDuration > 0 ? ` (${this._formatDuration(callDuration)})` : '';
       Utils.showToast(message + durationText, 'info');
     }
+
+    setTimeout(() => {
+      const el = document.getElementById('call-overlay');
+      if (el) el.remove();
+    }, 1500);
+
     this.partnerId = null;
     this.callStartTime = null;
   },
@@ -349,7 +360,7 @@ const CallManager = {
     } else if (mode === 'calling') {
       el.innerHTML = `<div class="call-container calling"><img class="call-avatar" src="${avatarUrl}" alt="" onerror="this.src='${Utils.getAvatarUrl(null, 'user')}'"><div class="call-name">${Utils.escapeHtml(this.partnerName)}</div><div class="call-status" id="call-status-text">正在呼叫...</div><div class="call-actions"><button class="call-btn call-btn-reject" onclick="CallManager.hangup()"><i data-lucide="phone-off"></i></button></div></div>`;
     } else if (mode === 'ongoing') {
-      el.innerHTML = `<div class="call-container ongoing"><img class="call-avatar call-avatar-ongoing" src="${avatarUrl}" alt="" onerror="this.src='${Utils.getAvatarUrl(null, 'user')}'"><div class="call-name">${Utils.escapeHtml(this.partnerName)}</div><div class="call-timer" id="call-timer">00:00</div><div class="call-actions"><button class="call-btn call-btn-mute" id="call-mute-btn" onclick="CallManager.toggleMute()"><i data-lucide="mic"></i></button><button class="call-btn call-btn-reject" onclick="CallManager.hangup()"><i data-lucide="phone-off"></i></button></div></div>`;
+      el.innerHTML = `<div class="call-container ongoing"><img class="call-avatar call-avatar-ongoing" src="${avatarUrl}" alt="" onerror="this.src='${Utils.getAvatarUrl(null, 'user')}'"><div class="call-name">${Utils.escapeHtml(this.partnerName)}</div><div class="call-status" id="call-status-text" style="display:none"></div><div class="call-timer" id="call-timer">00:00</div><div class="call-actions"><button class="call-btn call-btn-mute" id="call-mute-btn" onclick="CallManager.toggleMute()"><i data-lucide="mic"></i></button><button class="call-btn call-btn-reject" onclick="CallManager.hangup()"><i data-lucide="phone-off"></i></button></div></div>`;
     }
 
     document.body.appendChild(el);

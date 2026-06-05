@@ -16,6 +16,7 @@ import com.ncu.chat.service.GroupService;
 import com.ncu.chat.websocket.WebSocketGroupController;
 import org.springframework.beans.BeanUtils;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,18 +32,21 @@ public class GroupServiceImpl implements GroupService {
     private final GroupMessageMapper groupMessageMapper;
     private final UserMapper userMapper;
     private final WebSocketGroupController webSocketGroupController;
+    private final SimpMessagingTemplate messagingTemplate;
 
     // 手动构造函数，添加 @Lazy 解决循环依赖
     public GroupServiceImpl(ChatGroupMapper chatGroupMapper,
                             GroupMemberMapper groupMemberMapper,
                             GroupMessageMapper groupMessageMapper,
                             UserMapper userMapper,
-                            @Lazy WebSocketGroupController webSocketGroupController) {
+                            @Lazy WebSocketGroupController webSocketGroupController,
+                            SimpMessagingTemplate messagingTemplate) {
         this.chatGroupMapper = chatGroupMapper;
         this.groupMemberMapper = groupMemberMapper;
         this.groupMessageMapper = groupMessageMapper;
         this.userMapper = userMapper;
         this.webSocketGroupController = webSocketGroupController;
+        this.messagingTemplate = messagingTemplate;
     }
 
     // ==================== 群管理 ====================
@@ -72,11 +76,23 @@ public class GroupServiceImpl implements GroupService {
             for (Long memberId : dto.getMemberIds()) {
                 if (!memberId.equals(userId)) {
                     addMember(group.getId(), memberId, 0);
+                    chatGroupMapper.incrementMemberCount(group.getId());
+                }
+            }
+
+            // WebSocket 通知被邀请的成员
+            for (Long memberId : dto.getMemberIds()) {
+                if (!memberId.equals(userId)) {
+                    Map<String, Object> wsEvent = new HashMap<>();
+                    wsEvent.put("type", "MEMBER_INVITED");
+                    wsEvent.put("groupId", group.getId());
+                    wsEvent.put("groupName", group.getName());
+                    wsEvent.put("userId", memberId);
+                    messagingTemplate.convertAndSendToUser(String.valueOf(memberId), "/queue/group_events", wsEvent);
                 }
             }
         }
 
-        chatGroupMapper.incrementMemberCount(group.getId());
         return convertToGroupVO(group, userId);
     }
 
@@ -119,6 +135,9 @@ public class GroupServiceImpl implements GroupService {
             throw new BusinessException("只有群主可以解散群聊");
         }
 
+        // 先查出所有成员 ID（软删除前查，否则查不到）
+        List<Long> memberIds = groupMemberMapper.getUserIdsByGroupId(groupId);
+
         // 使用 LambdaUpdateWrapper 强制更新 deleted = 1
         LambdaUpdateWrapper<ChatGroup> groupWrapper = new LambdaUpdateWrapper<>();
         groupWrapper.eq(ChatGroup::getId, groupId)
@@ -130,6 +149,16 @@ public class GroupServiceImpl implements GroupService {
         memberWrapper.eq(GroupMember::getGroupId, groupId)
                 .set(GroupMember::getDeleted, 1);
         groupMemberMapper.update(null, memberWrapper);
+
+        // WebSocket 通知所有成员群已解散
+        Map<String, Object> event = new HashMap<>();
+        event.put("type", "GROUP_DISBAND");
+        event.put("groupId", groupId);
+        event.put("groupName", group.getName());
+        for (Long memberId : memberIds) {
+            if (memberId.equals(userId)) continue; // 不通知操作者自己
+            messagingTemplate.convertAndSendToUser(String.valueOf(memberId), "/queue/group_events", event);
+        }
     }
 
     @Override
@@ -161,7 +190,15 @@ public class GroupServiceImpl implements GroupService {
             vo.setGroupAvatar(group.getAvatar());
             vo.setAnnouncement(group.getAnnouncement());
             if (lastMsg != null) {
-                vo.setLastMessage(lastMsg.getContent());
+                // emoji 表情消息：显示表情符号而非 [图片]
+                if (lastMsg.getMessageType() != null && lastMsg.getMessageType() == 1
+                        && lastMsg.getFileUrl() != null && lastMsg.getFileUrl().length() <= 10) {
+                    vo.setLastMessage(lastMsg.getFileUrl());
+                    vo.setLastMessageType("");
+                } else {
+                    vo.setLastMessage(lastMsg.getContent());
+                    vo.setLastMessageType(getMessageTypeText(lastMsg.getMessageType()));
+                }
                 vo.setLastTime(lastMsg.getCreateTime());
             }
             result.add(vo);
@@ -209,10 +246,19 @@ public class GroupServiceImpl implements GroupService {
         if (current == null || current.getRole() < 1) {
             throw new BusinessException("无权限");
         }
+        ChatGroup group = chatGroupMapper.selectById(groupId);
         for (Long targetId : memberIds) {
             if (getMember(groupId, targetId) != null) continue;
             addMember(groupId, targetId, 0);
             chatGroupMapper.incrementMemberCount(groupId);
+
+            // WebSocket 通知被邀请者
+            Map<String, Object> event = new HashMap<>();
+            event.put("type", "MEMBER_INVITED");
+            event.put("groupId", groupId);
+            event.put("groupName", group != null ? group.getName() : "");
+            event.put("userId", targetId);
+            messagingTemplate.convertAndSendToUser(String.valueOf(targetId), "/queue/group_events", event);
         }
     }
 
@@ -238,6 +284,15 @@ public class GroupServiceImpl implements GroupService {
                 .set(GroupMember::getDeleted, 1);
         groupMemberMapper.update(null, wrapper);
         chatGroupMapper.decrementMemberCount(groupId);
+
+        // WebSocket 通知被移除的成员
+        ChatGroup group = chatGroupMapper.selectById(groupId);
+        Map<String, Object> event = new HashMap<>();
+        event.put("type", "MEMBER_REMOVED");
+        event.put("groupId", groupId);
+        event.put("groupName", group != null ? group.getName() : "");
+        event.put("userId", targetUserId);
+        messagingTemplate.convertAndSendToUser(String.valueOf(targetUserId), "/queue/group_events", event);
     }
 
     @Override
@@ -306,6 +361,7 @@ public class GroupServiceImpl implements GroupService {
         vo.setGroupId(msg.getGroupId());
         vo.setSenderId(userId);
         vo.setSenderNickname(sender != null ? sender.getNickname() : "");
+        vo.setSenderAvatar(sender != null ? sender.getAvatar() : null);
         vo.setContent(msg.getContent());
         vo.setMessageType(msg.getMessageType());
         vo.setFileUrl(msg.getFileUrl());
@@ -334,8 +390,13 @@ public class GroupServiceImpl implements GroupService {
             vo.setSenderId(msg.getSenderId());
             vo.setContent(msg.getContent());
             vo.setMessageType(msg.getMessageType());
+            vo.setFileUrl(msg.getFileUrl());
             vo.setCreateTime(msg.getCreateTime());
             vo.setIsSelf(msg.getSenderId().equals(userId));
+            // 填充发送者信息
+            User sender = userMapper.selectById(msg.getSenderId());
+            vo.setSenderNickname(sender != null ? sender.getNickname() : "未知用户");
+            vo.setSenderAvatar(sender != null ? sender.getAvatar() : null);
             voList.add(vo);
         }
         Collections.reverse(voList);
@@ -363,6 +424,9 @@ public class GroupServiceImpl implements GroupService {
     }
 
     private void addMember(Long groupId, Long userId, Integer role) {
+        // 先物理删除已软删除的旧记录，避免唯一键冲突
+        groupMemberMapper.deleteSoftDeleted(groupId, userId);
+
         GroupMember member = new GroupMember();
         member.setGroupId(groupId);
         member.setUserId(userId);
@@ -380,5 +444,16 @@ public class GroupServiceImpl implements GroupService {
         vo.setMyRole(member != null ? member.getRole() : null);
         vo.setIsDoNotDisturb(member != null && member.getDoNotDisturb() == 1);
         return vo;
+    }
+
+    private String getMessageTypeText(Integer messageType) {
+        if (messageType == null) return "";
+        switch (messageType) {
+            case 1: return "[图片]";
+            case 2: return "[文件]";
+            case 3: return "[语音]";
+            case 4: return "[语音通话]";
+            default: return "";
+        }
     }
 }

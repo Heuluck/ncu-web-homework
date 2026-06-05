@@ -2,15 +2,24 @@ const GroupSettingsModal = {
     async show(groupId) {
         const infoRes = await API.get(`/api/group/info/${groupId}`);
         const groupInfo = (infoRes && infoRes.code === 200) ? infoRes.data : {};
+        const isOwner = groupInfo.myRole === 2;
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
         modal.innerHTML = `<div class="modal-container" style="max-width:450px;"><div class="modal-header"><h3>群设置</h3><button class="modal-close btn-icon"><i data-lucide="x"></i></button></div>
       <div class="modal-body"><div class="settings-section"><div class="section-title">群名称</div><input type="text" id="settingsGroupName" class="input-control" value="${Utils.escapeHtml(groupInfo.name || '')}"></div>
-      <div class="settings-section"><div class="section-title">群公告</div><textarea id="settingsAnnouncement" class="input-control" rows="2">${Utils.escapeHtml(groupInfo.announcement || '')}</textarea></div>
-      ${groupInfo.myRole === 2 ? `<div class="settings-section danger-zone"><button class="btn btn-danger" id="disbandGroupBtn">解散群聊</button></div>` : ''}</div>
-      <div class="modal-footer"><button class="btn btn-secondary" id="closeSettingsBtn">关闭</button><button class="btn btn-primary" id="saveSettingsBtn">保存</button></div></div>`;
+      <div class="settings-section"><div class="section-title">群公告</div><textarea id="settingsAnnouncement" class="input-control" rows="3" style="resize:vertical;">${Utils.escapeHtml(groupInfo.announcement || '')}</textarea></div></div>
+      <div class="modal-footer" style="flex-direction:column;gap:8px;">
+        <div style="display:flex;gap:8px;width:100%;">
+          <button class="btn btn-secondary" id="closeSettingsBtn" style="flex:1;">关闭</button>
+          <button class="btn btn-primary" id="saveSettingsBtn" style="flex:1;">保存</button>
+        </div>
+        ${isOwner ? '<button class="btn btn-danger" id="disbandGroupBtn" style="width:100%;">解散群聊</button>' : ''}
+      </div></div>`;
         document.body.appendChild(modal);
         lucide.createIcons();
+
+        // 遮罩点击关闭
+        modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
 
         const closeModal = () => modal.remove();
         modal.querySelector('.modal-close').addEventListener('click', closeModal);
@@ -41,8 +50,6 @@ const GroupSettingsModal = {
                 if (res && res.code === 200) {
                     Utils.showToast('群聊已解散', 'success');
                     closeModal();
-
-                    // 清空当前群聊界面
                     if (GroupManager.currentGroupId === groupId) {
                         GroupManager.currentGroupId = null;
                         GroupManager.currentGroupInfo = null;
@@ -56,8 +63,6 @@ const GroupSettingsModal = {
                             </div>`;
                         lucide.createIcons();
                     }
-
-                    // 刷新群列表
                     await GroupManager.loadMyGroups();
                 } else {
                     Utils.showToast(res?.message || '解散失败', 'error');

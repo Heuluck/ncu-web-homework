@@ -347,7 +347,15 @@ const ChatManager = {
     if (this.currentFriendId === friendId) {
       this._appendBubble(msg);
       this.scrollToBottom();
-      if (msg.senderId !== myId) this._markAsRead(friendId);
+      if (msg.senderId !== myId) {
+        // 只在页面聚焦且可见时才标记已读
+        if (document.hasFocus() && !document.hidden) {
+          this._markAsRead(friendId);
+        } else {
+          // 等待页面重新聚焦时标记已读
+          this._pendingReadFriendId = friendId;
+        }
+      }
     }
   },
 

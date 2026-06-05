@@ -529,6 +529,18 @@
     FriendManager.checkPendingRequests();
   }
 
+  // ===== 页面聚焦时补发已读标记 =====
+  function handlePageFocus() {
+    if (ChatManager._pendingReadFriendId) {
+      ChatManager._markAsRead(ChatManager._pendingReadFriendId);
+      ChatManager._pendingReadFriendId = null;
+    }
+  }
+  window.addEventListener('focus', handlePageFocus);
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) handlePageFocus();
+  });
+
   // ===== 初始化表情选择器 =====
   EmojiPicker.init();
 

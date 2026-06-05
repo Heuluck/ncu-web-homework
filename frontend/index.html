@@ -315,6 +315,10 @@
         </div>
       </div>
       <div class="chat-header-actions">
+        <!-- 免打扰按钮 -->
+        <button class="btn-icon" id="muteBtn" title="消息免打扰" onclick="ConversationManager.toggleMute(ConversationManager.currentConvType(), ConversationManager.currentConvId()); ConversationManager.refreshMuteBtn();" style="display: none;">
+          <i data-lucide="bell"></i>
+        </button>
         <!-- 群聊专用按钮 -->
         <button class="btn-icon" id="groupMembersBtn" title="群成员" style="display: none;">
           <i data-lucide="users"></i>

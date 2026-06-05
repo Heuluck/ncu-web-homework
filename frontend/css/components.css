@@ -160,7 +160,7 @@
 }
 .badge-muted {
   background-color: var(--slate-100);
-  color: var(--slate-600);
+  color: var(--text-main);
 }
 
 /* === Cards === */

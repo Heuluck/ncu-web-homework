@@ -246,10 +246,11 @@ const WebSocketManager = {
    * 判断是否应该为新消息播放提示音，并播放。
    * 规则：
    * 1. 自己发的消息 → 不播放
-   * 2. 通话记录（messageType=4） → 不播放（系统消息）
-   * 3. 同一消息 ID 已播过 → 不播放（去重）
-   * 4. 当前正在看该聊天且页面可见 → 不播放
-   * 5. 2 秒内已播放过 → 不播放（冷却防 burst）
+   * 2. 系统消息/已读回执 → 不播放
+   * 3. 免打扰会话 → 不播放
+   * 4. 同一消息 ID 已播过 → 不播放（去重）
+   * 5. 当前正在看该聊天且页面可见 → 不播放
+   * 6. 2 秒内已播放过 → 不播放（冷却防 burst）
    */
   _tryPlayMessageSound(data) {
     const myId = Auth.getUserId();
@@ -262,7 +263,15 @@ const WebSocketManager = {
     if (data.messageType === 4) return;
     if (data.type === 'READ_RECEIPT') return;
 
-    // 规则 3：消息 ID 去重
+    // 规则 3：免打扰会话不播放
+    if (data.groupId) {
+      if (typeof ConversationManager !== 'undefined' && ConversationManager.isMuted('group', data.groupId)) return;
+    } else {
+      const friendId = data.senderId;
+      if (typeof ConversationManager !== 'undefined' && ConversationManager.isMuted('private', friendId)) return;
+    }
+
+    // 规则 4：消息 ID 去重
     if (data.id) {
       if (this._soundedMsgIds.has(data.id)) return;
       this._soundedMsgIds.add(data.id);
@@ -273,14 +282,14 @@ const WebSocketManager = {
       }
     }
 
-    // 规则 4：当前正在看该聊天（私聊或群聊）且页面可见 → 不播放
+    // 规则 5：当前正在看该聊天（私聊或群聊）且页面可见 → 不播放
     const isPrivateActive = typeof ChatManager !== 'undefined'
       && ChatManager.currentFriendId === data.senderId;
     const isGroupActive = typeof GroupManager !== 'undefined' && data.groupId
       && GroupManager.currentGroupId === data.groupId;
     if ((isPrivateActive || isGroupActive) && !document.hidden) return;
 
-    // 规则 5：2 秒冷却
+    // 规则 6：2 秒冷却
     const now = Date.now();
     if (now - this._lastSoundTime < 2000) return;
     this._lastSoundTime = now;

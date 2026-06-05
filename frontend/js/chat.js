@@ -29,6 +29,7 @@ const ChatManager = {
     await this.loadHistory(friendId, 1, true);
     this._markAsRead(friendId);
     ConversationManager.clearUnread(friendId);
+    ConversationManager.refreshMuteBtn();
   },
 
   _renderHeader() {

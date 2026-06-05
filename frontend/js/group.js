@@ -111,6 +111,7 @@ const GroupManager = {
         // 清除最近会话列表中的群聊未读
         if (typeof ConversationManager !== 'undefined') {
             ConversationManager.clearGroupUnread(groupId);
+            ConversationManager.refreshMuteBtn();
         }
     },
 

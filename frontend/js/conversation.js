@@ -4,6 +4,59 @@
 const ConversationManager = {
   conversations: [],
 
+  /** 免打扰存储 key -> localStorage */
+  _mutedKey: 'chat_muted',
+
+  _loadMuted() {
+    try { return new Set(JSON.parse(localStorage.getItem(this._mutedKey) || '[]')); }
+    catch (_) { return new Set(); }
+  },
+
+  _saveMuted(s) {
+    localStorage.setItem(this._mutedKey, JSON.stringify([...s]));
+  },
+
+  _muteKey(type, id) { return `${type}:${id}`; },
+
+  isMuted(type, id) { return this._loadMuted().has(this._muteKey(type, id)); },
+
+  toggleMute(type, id) {
+    const s = this._loadMuted();
+    const key = this._muteKey(type, id);
+    s.has(key) ? s.delete(key) : s.add(key);
+    this._saveMuted(s);
+    this.renderList();
+    return !s.has(key); // 返回操作后的状态：true=已免打扰，false=已取消
+  },
+
+  /** 当前打开的会话类型 */
+  currentConvType() {
+    if (typeof GroupManager !== 'undefined' && GroupManager.currentGroupId) return 'group';
+    if (ChatManager.currentFriendId) return 'private';
+    return null;
+  },
+
+  /** 当前打开的会话 ID */
+  currentConvId() {
+    if (typeof GroupManager !== 'undefined' && GroupManager.currentGroupId) return GroupManager.currentGroupId;
+    if (ChatManager.currentFriendId) return ChatManager.currentFriendId;
+    return null;
+  },
+
+  /** 刷新头部免打扰按钮状态 */
+  refreshMuteBtn() {
+    const btn = document.getElementById('muteBtn');
+    if (!btn) return;
+    const type = this.currentConvType();
+    const id = this.currentConvId();
+    if (!type || !id) { btn.style.display = 'none'; return; }
+    btn.style.display = 'inline-flex';
+    const muted = this.isMuted(type, id);
+    btn.innerHTML = muted ? '<i data-lucide="bell-off"></i>' : '<i data-lucide="bell"></i>';
+    btn.title = muted ? '取消免打扰' : '消息免打扰';
+    lucide.createIcons();
+  },
+
   async loadConversations() {
     // 加载私聊最近会话
     const res = await API.get('/api/message/private/recent');
@@ -59,17 +112,29 @@ const ConversationManager = {
       return;
     }
 
-    const unread = this.conversations.filter(c => c.unreadCount > 0);
-    const read = this.conversations.filter(c => c.unreadCount === 0);
+    // 有未读且未免打扰的会话 → "未读消息"分组
+    const unreadActive = this.conversations.filter(c =>
+      c.unreadCount > 0 && !this.isMuted(c._type, c._id)
+    );
+    // 免打扰的会话（无论有没有未读，不显示在"未读消息"区）
+    const muted = this.conversations.filter(c => this.isMuted(c._type, c._id));
+    // 已读且未免打扰的会话
+    const readNormal = this.conversations.filter(c =>
+      c.unreadCount === 0 && !this.isMuted(c._type, c._id)
+    );
 
     let html = '';
-    if (unread.length > 0) {
+    if (unreadActive.length > 0) {
       html += '<div class="list-group-title">未读消息</div>';
-      unread.forEach(c => { html += this._renderItem(c); });
+      unreadActive.forEach(c => { html += this._renderItem(c); });
     }
-    if (read.length > 0) {
-      if (unread.length > 0) html += '<div class="list-group-title">全部会话</div>';
-      read.forEach(c => { html += this._renderItem(c); });
+    if (muted.length > 0) {
+      html += '<div class="list-group-title">免打扰</div>';
+      muted.forEach(c => { html += this._renderItem(c); });
+    }
+    if (readNormal.length > 0) {
+      html += '<div class="list-group-title">全部会话</div>';
+      readNormal.forEach(c => { html += this._renderItem(c); });
     }
 
     container.innerHTML = html;
@@ -99,7 +164,7 @@ const ConversationManager = {
       ? conv.lastMessageType
       : Utils.escapeHtml(conv.lastMessage || '');
     const unreadBadge = conv.unreadCount > 0
-      ? `<span class="badge">${conv.unreadCount > 99 ? '99+' : conv.unreadCount}</span>`
+      ? `<span class="badge${this.isMuted(conv._type, conv._id) ? ' badge-muted' : ''}">${conv.unreadCount > 99 ? '99+' : conv.unreadCount}</span>`
       : '';
     // 群聊头像：有图用图，无图用群名首字
     const avatarHtml = isGroup && !conv.avatar
@@ -152,6 +217,7 @@ const ConversationManager = {
       if (callBtn2) callBtn2.style.display = 'inline-flex'; // 私聊显示语音通话
       ChatManager.openChat(id);
     }
+    this.refreshMuteBtn();
   },
 
   addOrUpdateConversation(msg) {

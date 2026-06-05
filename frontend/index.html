@@ -247,6 +247,10 @@
               <i data-lucide="user" style="width: 16px; height: 16px;"></i>
               个人资料
             </div>
+            <div class="dropdown-item admin-only" onclick="location.href='/admin.html'" style="display:none;">
+              <i data-lucide="shield" style="width: 16px; height: 16px;"></i>
+              管理后台
+            </div>
             <div class="dropdown-divider"></div>
             <div class="dropdown-item" onclick="Auth.logout()">
               <i data-lucide="log-out" style="width: 16px; height: 16px;"></i>
@@ -318,11 +322,10 @@
         <button class="btn-icon" id="groupSettingsBtn" title="群设置" style="display: none;">
           <i data-lucide="settings"></i>
         </button>
-        <!-- 聊天记录按钮 -->
         <button class="btn-icon" id="chatHistoryBtn" title="聊天记录">
           <i data-lucide="message-square"></i>
         </button>
-        <button class="btn-icon" title="语音通话">
+        <button class="btn-icon" title="语音通话" onclick="var info=ChatManager.currentFriendInfo; CallManager.startCall(ChatManager.currentFriendId, info?info.nickname:'用户', document.getElementById('chatAvatar')?.src||'')">
           <i data-lucide="phone"></i>
         </button>
         <button class="btn-icon" id="chatMoreBtn" title="查看更多">
@@ -354,7 +357,7 @@
         <button class="btn-icon" title="文件">
           <i data-lucide="paperclip"></i>
         </button>
-        <button class="btn-icon" title="语音">
+        <button class="btn-icon" title="语音" onclick="VoiceManager.toggleRecording()">
           <i data-lucide="mic"></i>
         </button>
         <!-- 表情选择器容器（在工具栏内绝对定位） -->
@@ -434,6 +437,8 @@
 <script src="js/group.js"></script>
 <script src="js/emoji.js"></script>
 <script src="js/friend.js"></script>
+<script src="js/voice.js"></script>
+<script src="js/call.js"></script>
 <script src="js/components/create-group-modal.js"></script>
 <script src="js/components/group-member-panel.js"></script>
 <script src="js/components/group-settings-modal.js"></script>
@@ -459,6 +464,10 @@
     else if (user.status === 2) statusDot.classList.add('busy');
     else if (user.status === 3) statusDot.classList.add('dnd');
   }
+  // 管理员才显示管理后台入口
+  if (user?.role === 1) {
+    document.querySelectorAll('.admin-only').forEach(el => el.style.display = '');
+  }
 
   lucide.createIcons();
 
@@ -478,6 +487,28 @@
   // 群聊消息监听
   WebSocketManager.onGroupMessage((data) => {
     GroupManager.receiveGroupMessage(data);
+  });
+
+  // 语音消息监听
+  WebSocketManager.onVoiceMessage((data) => {
+    // 适配语音消息为聊天消息格式，确保渲染引擎识别
+    data.messageType = 3;
+    data.content = data.fileUrl || '';
+    data.status = 1;
+    // 更新最近会话列表
+    ConversationManager.addOrUpdateConversation({
+      friendId: data.senderId,
+      content: '[语音]',
+      messageType: 3,
+      senderId: data.senderId,
+      receiverId: data.receiverId,
+      createTime: data.createTime
+    });
+    if (data.groupId) {
+      GroupManager.receiveGroupMessage(data);
+    } else {
+      ChatManager.receiveMessage(data);
+    }
   });
 
   WebSocketManager.connect();
@@ -591,6 +622,34 @@
   document.getElementById('chatHistoryBtn')?.addEventListener('click', () => {
     toggleChatHistoryModal();
   });
+
+  // ===== 语音录制按钮（桌面端点击切换，非长按） =====
+  const voiceBtn = document.querySelector('.chat-input-toolbar .btn-icon[title="语音"]');
+  if (voiceBtn) {
+    voiceBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      VoiceManager.toggleRecording();
+    });
+  }
+
+  // ===== 语音通话按钮 =====
+  const callBtn = document.querySelector('.chat-header-actions .btn-icon[title="语音通话"]');
+  if (callBtn) {
+    callBtn.addEventListener('click', () => {
+      if (ChatManager.currentFriendId && ChatManager.currentFriendInfo) {
+        CallManager.startCall(
+          ChatManager.currentFriendId,
+          ChatManager.currentFriendInfo.nickname || '好友',
+          ChatManager.currentFriendInfo.avatar || ''
+        );
+      } else {
+        Utils.showToast('请先选择一个好友', 'warning');
+      }
+    });
+  }
+
+  // 初始化通话信令监听
+  CallManager.init();
 
   // ===== 消息输入 =====
   const messageInput = document.getElementById('messageInput');

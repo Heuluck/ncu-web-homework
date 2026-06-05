@@ -1,0 +1,12 @@
+USE chat_system;
+
+CREATE TABLE IF NOT EXISTS `sensitive_word` (
+  `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
+  `word` VARCHAR(100) NOT NULL COMMENT '敏感词',
+  `category` VARCHAR(50) NOT NULL DEFAULT '通用' COMMENT '分类',
+  `enabled` TINYINT NOT NULL DEFAULT 1 COMMENT '是否启用：0-禁用，1-启用',
+  `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  UNIQUE INDEX `uk_word` (`word`),
+  INDEX `idx_enabled` (`enabled`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='敏感词表';

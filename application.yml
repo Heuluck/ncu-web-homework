@@ -35,4 +35,4 @@ file:
   upload:
     path: ./uploads
     max-size: 50MB
-    allowed-types: jpg,jpeg,png,gif,pdf,doc,docx,txt,mp3,wav
+    allowed-types: jpg,jpeg,png,gif,pdf,doc,docx,txt,mp3,wav,webm

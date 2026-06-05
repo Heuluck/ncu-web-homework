@@ -238,6 +238,7 @@ public class PrivateMessageServiceImpl implements PrivateMessageService {
             case 1: return "[图片]";
             case 2: return "[文件]";
             case 3: return "[语音]";
+            case 4: return "[语音通话]";
             default: return "";
         }
     }

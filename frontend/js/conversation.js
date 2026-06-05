@@ -22,6 +22,7 @@ const ConversationManager = {
         nickname: g.groupName,
         avatar: g.groupAvatar,
         lastMessage: g.lastMessage || '',
+        lastMessageType: g.lastMessageType || '',
         lastTime: g.lastTime || null,
         unreadCount: g.unreadCount || 0,
         onlineStatus: 0

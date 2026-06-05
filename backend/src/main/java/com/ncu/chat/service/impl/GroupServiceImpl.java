@@ -192,6 +192,7 @@ public class GroupServiceImpl implements GroupService {
             if (lastMsg != null) {
                 vo.setLastMessage(lastMsg.getContent());
                 vo.setLastTime(lastMsg.getCreateTime());
+                vo.setLastMessageType(getMessageTypeText(lastMsg.getMessageType()));
             }
             result.add(vo);
         }
@@ -436,5 +437,16 @@ public class GroupServiceImpl implements GroupService {
         vo.setMyRole(member != null ? member.getRole() : null);
         vo.setIsDoNotDisturb(member != null && member.getDoNotDisturb() == 1);
         return vo;
+    }
+
+    private String getMessageTypeText(Integer messageType) {
+        if (messageType == null) return "";
+        switch (messageType) {
+            case 1: return "[图片]";
+            case 2: return "[文件]";
+            case 3: return "[语音]";
+            case 4: return "[语音通话]";
+            default: return "";
+        }
     }
 }

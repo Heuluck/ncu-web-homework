@@ -434,6 +434,9 @@ const ChatManager = {
       items += `<div class="context-divider"></div>
         <div class="context-menu-item" style="color:var(--text-muted);cursor:default;">还不是好友</div>`;
     } else {
+      items += `<div class="context-menu-item" onclick="FriendManager.openMoveFriendModal(${friendshipId});ChatManager._closeChatMenu();">
+          <i data-lucide="folder-input" style="width:16px;height:16px;"></i> 移动到分组
+        </div>`;
       if (canUnblock) {
         items += `<div class="context-divider"></div>
           <div class="context-menu-item" onclick="FriendManager.currentContextFriendshipId=${friendshipId};FriendManager._ctxUnblock();ChatManager._closeChatMenu();" style="color:var(--color-primary);">取消拉黑</div>`;

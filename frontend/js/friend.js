@@ -703,10 +703,11 @@ const FriendManager = {
                     <span style="font-size: 12px; color: var(--text-muted); margin-left: 8px;">${friendCount}位好友</span>
                     ${group.isDefault ? '<span style="font-size: 11px; color: var(--color-primary); margin-left: 4px;">默认</span>' : ''}
                 </div>
+                ${group.groupId !== 0 ? `
                 <button class="btn-icon" onclick="FriendManager.showRenameGroupForm(${group.groupId}, '${Utils.escapeHtml(group.name)}')" title="重命名">
                     <i data-lucide="pencil" style="width: 14px; height: 14px;"></i>
-                </button>
-                ${!group.isDefault ? `
+                </button>` : ''}
+                ${!group.isDefault && group.groupId !== 0 ? `
                 <button class="btn-icon" onclick="FriendManager.deleteGroupConfirm(${group.groupId}, '${Utils.escapeHtml(group.name)}')" title="删除">
                     <i data-lucide="trash-2" style="width: 14px; height: 14px; color: var(--color-danger);"></i>
                 </button>` : ''}

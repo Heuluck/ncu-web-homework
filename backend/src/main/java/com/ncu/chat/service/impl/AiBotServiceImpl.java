@@ -149,8 +149,8 @@ public class AiBotServiceImpl implements AiBotService {
                 new LambdaQueryWrapper<GroupMember>()
                         .eq(GroupMember::getGroupId, groupId)
                         .eq(GroupMember::getUserId, userId));
-        if (member == null || member.getRole() < 1) {
-            throw new BusinessException("只有群主或管理员可以添加机器人");
+        if (member == null || member.getRole() != 2) {
+            throw new BusinessException("只有群主可以添加机器人");
         }
         AiBot bot = aiBotMapper.selectById(botId);
         if (bot == null) throw new BusinessException("机器人不存在");
@@ -174,8 +174,8 @@ public class AiBotServiceImpl implements AiBotService {
                 new LambdaQueryWrapper<GroupMember>()
                         .eq(GroupMember::getGroupId, groupId)
                         .eq(GroupMember::getUserId, userId));
-        if (member == null || member.getRole() < 1) {
-            throw new BusinessException("只有群主或管理员可以移除机器人");
+        if (member == null || member.getRole() != 2) {
+            throw new BusinessException("只有群主可以移除机器人");
         }
         groupBotMapper.delete(
                 new LambdaQueryWrapper<GroupBot>()

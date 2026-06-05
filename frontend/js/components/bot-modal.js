@@ -13,7 +13,7 @@ const BotModal = {
         this.groupId = groupId;
         const infoRes = await API.get(`/api/group/info/${groupId}`);
         this.groupInfo = (infoRes && infoRes.code === 200) ? infoRes.data : {};
-        this.isOwner = this.groupInfo.myRole >= 1;
+        this.isOwner = this.groupInfo.myRole === 2;
         await BotManager.loadGroupBots(groupId);
         await BotManager.loadMyBots();
         this._renderListView();

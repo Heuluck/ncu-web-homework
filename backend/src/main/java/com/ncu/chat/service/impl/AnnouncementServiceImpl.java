@@ -1,5 +1,7 @@
 package com.ncu.chat.service.impl;
 
+import com.ncu.chat.common.BusinessException;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.ncu.chat.common.PageResult;
@@ -39,7 +41,7 @@ public class AnnouncementServiceImpl implements AnnouncementService {
     public Announcement updateAnnouncement(Long id, String title, String content, Integer isPublished) {
         Announcement announcement = announcementMapper.selectById(id);
         if (announcement == null) {
-            throw new RuntimeException("公告不存在");
+            throw new BusinessException("公告不存在");
         }
         if (title != null) announcement.setTitle(title);
         if (content != null) announcement.setContent(content);

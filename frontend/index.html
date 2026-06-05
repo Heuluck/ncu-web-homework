@@ -489,21 +489,18 @@
     GroupManager.receiveGroupMessage(data);
   });
 
-  // 语音消息监听
+  // 语音消息监听（带去重，防止 WebSocket 重复推送导致未读计数翻倍）
+  const _voiceMsgIds = new Set();
   WebSocketManager.onVoiceMessage((data) => {
+    // 去重：VoiceMessageVO.id 来自 voice_message 表
+    if (data.id && _voiceMsgIds.has(data.id)) return;
+    if (data.id) _voiceMsgIds.add(data.id);
     // 适配语音消息为聊天消息格式，确保渲染引擎识别
     data.messageType = 3;
     data.content = data.fileUrl || '';
     data.status = 1;
-    // 更新最近会话列表
-    ConversationManager.addOrUpdateConversation({
-      friendId: data.senderId,
-      content: '[语音]',
-      messageType: 3,
-      senderId: data.senderId,
-      receiverId: data.receiverId,
-      createTime: data.createTime
-    });
+    // 注意：ConversationManager.addOrUpdateConversation 由 ChatManager.receiveMessage 统一处理，
+    // 此处不重复调用，避免未读计数翻倍
     if (data.groupId) {
       GroupManager.receiveGroupMessage(data);
     } else {
@@ -517,6 +514,11 @@
   if (typeof FriendManager !== 'undefined') {
     FriendManager.loadFriends();
     FriendManager.checkPendingRequests();
+  }
+
+  // 初始化语音管理器（恢复已播放状态等）
+  if (typeof VoiceManager !== 'undefined') {
+    VoiceManager.init();
   }
 
   // ===== 初始化表情选择器 =====

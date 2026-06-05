@@ -1,5 +1,7 @@
 package com.ncu.chat.service.impl;
 
+import com.ncu.chat.common.BusinessException;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -82,11 +84,11 @@ public class GroupServiceImpl implements GroupService {
     public GroupVO getGroupInfo(Long userId, Long groupId) {
         ChatGroup group = chatGroupMapper.selectById(groupId);
         if (group == null || group.getDeleted() == 1) {
-            throw new RuntimeException("群聊不存在");
+            throw new BusinessException("群聊不存在");
         }
         GroupMember member = getMember(groupId, userId);
         if (member == null) {
-            throw new RuntimeException("你不是群成员");
+            throw new BusinessException("你不是群成员");
         }
         return convertToGroupVO(group, userId);
     }
@@ -96,11 +98,11 @@ public class GroupServiceImpl implements GroupService {
     public GroupVO updateGroupInfo(Long userId, Long groupId, UpdateGroupDTO dto) {
         GroupMember member = getMember(groupId, userId);
         if (member == null || member.getRole() < 1) {
-            throw new RuntimeException("只有群主或管理员可以修改群信息");
+            throw new BusinessException("只有群主或管理员可以修改群信息");
         }
         ChatGroup group = chatGroupMapper.selectById(groupId);
         if (group == null) {
-            throw new RuntimeException("群聊不存在");
+            throw new BusinessException("群聊不存在");
         }
         if (dto.getName() != null) group.setName(dto.getName());
         if (dto.getAvatar() != null) group.setAvatar(dto.getAvatar());
@@ -114,7 +116,7 @@ public class GroupServiceImpl implements GroupService {
     public void disbandGroup(Long userId, Long groupId) {
         ChatGroup group = chatGroupMapper.selectById(groupId);
         if (group == null || !group.getOwnerId().equals(userId)) {
-            throw new RuntimeException("只有群主可以解散群聊");
+            throw new BusinessException("只有群主可以解散群聊");
         }
 
         // 使用 LambdaUpdateWrapper 强制更新 deleted = 1
@@ -172,7 +174,7 @@ public class GroupServiceImpl implements GroupService {
     @Override
     public List<GroupMemberVO> getGroupMembers(Long userId, Long groupId) {
         if (getMember(groupId, userId) == null) {
-            throw new RuntimeException("你不是群成员");
+            throw new BusinessException("你不是群成员");
         }
         LambdaQueryWrapper<GroupMember> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(GroupMember::getGroupId, groupId).eq(GroupMember::getDeleted, 0);
@@ -205,7 +207,7 @@ public class GroupServiceImpl implements GroupService {
     public void inviteMembers(Long userId, Long groupId, List<Long> memberIds) {
         GroupMember current = getMember(groupId, userId);
         if (current == null || current.getRole() < 1) {
-            throw new RuntimeException("无权限");
+            throw new BusinessException("无权限");
         }
         for (Long targetId : memberIds) {
             if (getMember(groupId, targetId) != null) continue;
@@ -219,14 +221,14 @@ public class GroupServiceImpl implements GroupService {
     public void removeMember(Long userId, Long groupId, Long targetUserId) {
         GroupMember current = getMember(groupId, userId);
         GroupMember target = getMember(groupId, targetUserId);
-        if (current == null) throw new RuntimeException("你不是群成员");
-        if (target == null) throw new RuntimeException("目标用户不在群中");
+        if (current == null) throw new BusinessException("你不是群成员");
+        if (target == null) throw new BusinessException("目标用户不在群中");
         if (current.getRole() == 2) {
-            if (targetUserId.equals(userId)) throw new RuntimeException("群主不能踢自己");
+            if (targetUserId.equals(userId)) throw new BusinessException("群主不能踢自己");
         } else if (current.getRole() == 1) {
-            if (target.getRole() >= 1) throw new RuntimeException("管理员不能踢群主或其他管理员");
+            if (target.getRole() >= 1) throw new BusinessException("管理员不能踢群主或其他管理员");
         } else {
-            throw new RuntimeException("无权限");
+            throw new BusinessException("无权限");
         }
 
         // 使用 LambdaUpdateWrapper 软删除成员
@@ -244,9 +246,9 @@ public class GroupServiceImpl implements GroupService {
         GroupMember current = getMember(groupId, userId);
         GroupMember target = getMember(groupId, targetUserId);
         if (current == null || current.getRole() != 2) {
-            throw new RuntimeException("只有群主可以设置管理员");
+            throw new BusinessException("只有群主可以设置管理员");
         }
-        if (target.getRole() == 2) throw new RuntimeException("不能设置群主为管理员");
+        if (target.getRole() == 2) throw new BusinessException("不能设置群主为管理员");
         target.setRole(target.getRole() == 1 ? 0 : 1);
         groupMemberMapper.updateById(target);
     }
@@ -256,10 +258,10 @@ public class GroupServiceImpl implements GroupService {
     public void transferOwner(Long userId, Long groupId, Long targetUserId) {
         ChatGroup group = chatGroupMapper.selectById(groupId);
         if (group == null || !group.getOwnerId().equals(userId)) {
-            throw new RuntimeException("只有群主可以转让群聊");
+            throw new BusinessException("只有群主可以转让群聊");
         }
         GroupMember newOwner = getMember(groupId, targetUserId);
-        if (newOwner == null) throw new RuntimeException("目标用户不在群中");
+        if (newOwner == null) throw new BusinessException("目标用户不在群中");
         GroupMember oldOwner = getMember(groupId, userId);
         oldOwner.setRole(0);
         newOwner.setRole(2);
@@ -272,7 +274,7 @@ public class GroupServiceImpl implements GroupService {
     @Override
     public void setDoNotDisturb(Long userId, Long groupId, Boolean enabled) {
         GroupMember member = getMember(groupId, userId);
-        if (member == null) throw new RuntimeException("你不是群成员");
+        if (member == null) throw new BusinessException("你不是群成员");
         member.setDoNotDisturb(enabled ? 1 : 0);
         groupMemberMapper.updateById(member);
     }
@@ -283,7 +285,7 @@ public class GroupServiceImpl implements GroupService {
     @Transactional
     public GroupMessageVO sendMessage(Long userId, GroupMessageSendDTO dto) {
         GroupMember member = getMember(dto.getGroupId(), userId);
-        if (member == null) throw new RuntimeException("你不是群成员");
+        if (member == null) throw new BusinessException("你不是群成员");
 
         System.out.println("[DEBUG] 发送群消息：groupId=" + dto.getGroupId() + ", content=" + dto.getContent() + ", messageType=" + dto.getMessageType() + ", fileUrl=" + dto.getFileUrl());
 
@@ -317,7 +319,7 @@ public class GroupServiceImpl implements GroupService {
     @Override
     public PageResult<GroupMessageVO> getGroupMessages(Long userId, Long groupId, Integer pageNum, Integer pageSize) {
         if (getMember(groupId, userId) == null) {
-            throw new RuntimeException("你不是群成员");
+            throw new BusinessException("你不是群成员");
         }
         Page<GroupMessage> page = new Page<>(pageNum, pageSize);
         LambdaQueryWrapper<GroupMessage> wrapper = new LambdaQueryWrapper<>();

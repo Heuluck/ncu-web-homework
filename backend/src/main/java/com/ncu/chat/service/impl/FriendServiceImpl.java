@@ -1,5 +1,7 @@
 package com.ncu.chat.service.impl;
 
+import com.ncu.chat.common.BusinessException;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.ncu.chat.mapper.*;
@@ -76,27 +78,27 @@ public class FriendServiceImpl implements FriendService {
     @Transactional
     public void sendRequest(Long requesterId, SendFriendRequestDTO dto) {
         if (requesterId.equals(dto.getFriendId())) {
-            throw new RuntimeException("不能添加自己为好友");
+            throw new BusinessException("不能添加自己为好友");
         }
 
         // 检查目标用户是否存在
         User target = userMapper.selectById(dto.getFriendId());
         if (target == null || target.getEnabled() == 0) {
-            throw new RuntimeException("用户不存在或已被禁用");
+            throw new BusinessException("用户不存在或已被禁用");
         }
 
         // 检查是否已有关系记录
         Friendship existing = friendshipMapper.findByUserPair(requesterId, dto.getFriendId());
         if (existing != null) {
             if (existing.getStatus() == 0) {
-                throw new RuntimeException("已发送过好友申请，请等待对方处理");
+                throw new BusinessException("已发送过好友申请，请等待对方处理");
             }
             if (existing.getStatus() == 1) {
-                throw new RuntimeException("你们已经是好友了");
+                throw new BusinessException("你们已经是好友了");
             }
             if ((existing.getRequesterId().equals(requesterId) && existing.getRequesterBlocked() != null && existing.getRequesterBlocked() == 1)
                 || (existing.getReceiverId().equals(requesterId) && existing.getReceiverBlocked() != null && existing.getReceiverBlocked() == 1)) {
-                throw new RuntimeException("你已拉黑对方，无法发送申请");
+                throw new BusinessException("你已拉黑对方，无法发送申请");
             }
             // status == 2 (已拒绝) → 允许重新发送
             existing.setStatus(0);
@@ -136,13 +138,13 @@ public class FriendServiceImpl implements FriendService {
     public void acceptRequest(Long userId, Long friendshipId, Long groupId) {
         Friendship friendship = friendshipMapper.selectById(friendshipId);
         if (friendship == null) {
-            throw new RuntimeException("好友申请不存在");
+            throw new BusinessException("好友申请不存在");
         }
         if (!friendship.getReceiverId().equals(userId)) {
-            throw new RuntimeException("无权处理该申请");
+            throw new BusinessException("无权处理该申请");
         }
         if (friendship.getStatus() != 0) {
-            throw new RuntimeException("该申请已处理");
+            throw new BusinessException("该申请已处理");
         }
 
         // 确定为接收者的默认分组
@@ -174,13 +176,13 @@ public class FriendServiceImpl implements FriendService {
     public void rejectRequest(Long userId, Long friendshipId) {
         Friendship friendship = friendshipMapper.selectById(friendshipId);
         if (friendship == null) {
-            throw new RuntimeException("好友申请不存在");
+            throw new BusinessException("好友申请不存在");
         }
         if (!friendship.getReceiverId().equals(userId)) {
-            throw new RuntimeException("无权处理该申请");
+            throw new BusinessException("无权处理该申请");
         }
         if (friendship.getStatus() != 0) {
-            throw new RuntimeException("该申请已处理");
+            throw new BusinessException("该申请已处理");
         }
 
         friendship.setStatus(2);
@@ -194,13 +196,13 @@ public class FriendServiceImpl implements FriendService {
     public void deleteFriend(Long userId, Long friendshipId) {
         Friendship friendship = friendshipMapper.selectById(friendshipId);
         if (friendship == null) {
-            throw new RuntimeException("好友关系不存在");
+            throw new BusinessException("好友关系不存在");
         }
         if (!friendship.getRequesterId().equals(userId) && !friendship.getReceiverId().equals(userId)) {
-            throw new RuntimeException("无权操作");
+            throw new BusinessException("无权操作");
         }
         if (friendship.getStatus() != 1 && friendship.getStatus() != 3) {
-            throw new RuntimeException("当前状态不允许删除");
+            throw new BusinessException("当前状态不允许删除");
         }
 
         friendshipMapper.deleteById(friendshipId);
@@ -270,7 +272,7 @@ public class FriendServiceImpl implements FriendService {
         LambdaQueryWrapper<FriendGroup> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(FriendGroup::getUserId, userId).eq(FriendGroup::getName, dto.getName());
         if (friendGroupMapper.selectCount(wrapper) > 0) {
-            throw new RuntimeException("分组名称已存在");
+            throw new BusinessException("分组名称已存在");
         }
 
         FriendGroup group = new FriendGroup();
@@ -294,7 +296,7 @@ public class FriendServiceImpl implements FriendService {
     public FriendGroupVO updateGroup(Long userId, Long groupId, UpdateFriendGroupDTO dto) {
         FriendGroup group = friendGroupMapper.selectById(groupId);
         if (group == null || !group.getUserId().equals(userId)) {
-            throw new RuntimeException("分组不存在");
+            throw new BusinessException("分组不存在");
         }
         group.setName(dto.getName());
         friendGroupMapper.updateById(group);
@@ -313,10 +315,10 @@ public class FriendServiceImpl implements FriendService {
     public void deleteGroup(Long userId, Long groupId) {
         FriendGroup group = friendGroupMapper.selectById(groupId);
         if (group == null || !group.getUserId().equals(userId)) {
-            throw new RuntimeException("分组不存在");
+            throw new BusinessException("分组不存在");
         }
         if (group.getIsDefault() == 1) {
-            throw new RuntimeException("默认分组不能删除");
+            throw new BusinessException("默认分组不能删除");
         }
 
         // 获取默认分组
@@ -347,12 +349,12 @@ public class FriendServiceImpl implements FriendService {
     public void moveFriend(Long userId, Long friendshipId, MoveFriendDTO dto) {
         Friendship friendship = friendshipMapper.selectById(friendshipId);
         if (friendship == null || friendship.getStatus() != 1) {
-            throw new RuntimeException("好友关系不存在");
+            throw new BusinessException("好友关系不存在");
         }
         // 验证目标分组属于当前用户
         FriendGroup targetGroup = friendGroupMapper.selectById(dto.getGroupId());
         if (targetGroup == null || !targetGroup.getUserId().equals(userId)) {
-            throw new RuntimeException("目标分组不存在");
+            throw new BusinessException("目标分组不存在");
         }
 
         // 更新当前用户视角的分组
@@ -361,7 +363,7 @@ public class FriendServiceImpl implements FriendService {
         } else if (friendship.getReceiverId().equals(userId)) {
             friendship.setReceiverGroupId(dto.getGroupId());
         } else {
-            throw new RuntimeException("无权操作");
+            throw new BusinessException("无权操作");
         }
         friendshipMapper.updateById(friendship);
     }
@@ -373,24 +375,24 @@ public class FriendServiceImpl implements FriendService {
     public void blockFriend(Long userId, Long friendshipId) {
         Friendship friendship = friendshipMapper.selectById(friendshipId);
         if (friendship == null) {
-            throw new RuntimeException("好友关系不存在");
+            throw new BusinessException("好友关系不存在");
         }
         if (friendship.getStatus() != 1) {
-            throw new RuntimeException("当前状态不允许拉黑");
+            throw new BusinessException("当前状态不允许拉黑");
         }
 
         if (friendship.getRequesterId().equals(userId)) {
             if (friendship.getRequesterBlocked() != null && friendship.getRequesterBlocked() == 1) {
-                throw new RuntimeException("已经拉黑了");
+                throw new BusinessException("已经拉黑了");
             }
             friendship.setRequesterBlocked(1);
         } else if (friendship.getReceiverId().equals(userId)) {
             if (friendship.getReceiverBlocked() != null && friendship.getReceiverBlocked() == 1) {
-                throw new RuntimeException("已经拉黑了");
+                throw new BusinessException("已经拉黑了");
             }
             friendship.setReceiverBlocked(1);
         } else {
-            throw new RuntimeException("无权操作");
+            throw new BusinessException("无权操作");
         }
         friendshipMapper.updateById(friendship);
         // WebSocket 通知对方
@@ -409,21 +411,21 @@ public class FriendServiceImpl implements FriendService {
     public void unblockFriend(Long userId, Long friendshipId) {
         Friendship friendship = friendshipMapper.selectById(friendshipId);
         if (friendship == null) {
-            throw new RuntimeException("好友关系不存在");
+            throw new BusinessException("好友关系不存在");
         }
 
         if (friendship.getRequesterId().equals(userId)) {
             if (friendship.getRequesterBlocked() == null || friendship.getRequesterBlocked() == 0) {
-                throw new RuntimeException("你未拉黑该好友");
+                throw new BusinessException("你未拉黑该好友");
             }
             friendship.setRequesterBlocked(0);
         } else if (friendship.getReceiverId().equals(userId)) {
             if (friendship.getReceiverBlocked() == null || friendship.getReceiverBlocked() == 0) {
-                throw new RuntimeException("你未拉黑该好友");
+                throw new BusinessException("你未拉黑该好友");
             }
             friendship.setReceiverBlocked(0);
         } else {
-            throw new RuntimeException("无权操作");
+            throw new BusinessException("无权操作");
         }
         friendshipMapper.updateById(friendship);
         // WebSocket 通知对方

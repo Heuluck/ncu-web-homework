@@ -1,5 +1,7 @@
 package com.ncu.chat.service.impl;
 
+import com.ncu.chat.common.BusinessException;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.ncu.chat.mapper.FriendGroupMapper;
 import com.ncu.chat.mapper.UserMapper;
@@ -35,13 +37,13 @@ public class UserServiceImpl implements UserService {
     @Override
     public Map<String, Object> register(UserRegisterDTO dto) {
         if (!dto.getPassword().equals(dto.getConfirmPassword())) {
-            throw new RuntimeException("两次密码不一致");
+            throw new BusinessException("两次密码不一致");
         }
 
         LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(User::getUsername, dto.getUsername());
         if (userMapper.selectCount(wrapper) > 0) {
-            throw new RuntimeException("用户名已存在");
+            throw new BusinessException("用户名已存在");
         }
 
         User user = new User();
@@ -77,13 +79,13 @@ public class UserServiceImpl implements UserService {
         User user = userMapper.selectOne(wrapper);
 
         if (user == null) {
-            throw new RuntimeException("用户名不存在");
+            throw new BusinessException("用户名不存在");
         }
         if (user.getEnabled() == 0) {
-            throw new RuntimeException("账号已被禁用");
+            throw new BusinessException("账号已被禁用");
         }
         if (!passwordEncoder.matches(dto.getPassword(), user.getPassword())) {
-            throw new RuntimeException("密码错误");
+            throw new BusinessException("密码错误");
         }
 
         user.setStatus(1);
@@ -101,7 +103,7 @@ public class UserServiceImpl implements UserService {
     public UserProfileDTO getProfile(Long userId) {
         User user = userMapper.selectById(userId);
         if (user == null) {
-            throw new RuntimeException("用户不存在");
+            throw new BusinessException("用户不存在");
         }
         return convertToProfile(user);
     }
@@ -110,7 +112,7 @@ public class UserServiceImpl implements UserService {
     public UserProfileDTO updateProfile(Long userId, UserProfileDTO dto) {
         User user = userMapper.selectById(userId);
         if (user == null) {
-            throw new RuntimeException("用户不存在");
+            throw new BusinessException("用户不存在");
         }
         if (dto.getNickname() != null) user.setNickname(dto.getNickname());
         if (dto.getAvatar() != null) user.setAvatar(dto.getAvatar());
@@ -123,10 +125,10 @@ public class UserServiceImpl implements UserService {
     public void changePassword(Long userId, String oldPassword, String newPassword) {
         User user = userMapper.selectById(userId);
         if (user == null) {
-            throw new RuntimeException("用户不存在");
+            throw new BusinessException("用户不存在");
         }
         if (!passwordEncoder.matches(oldPassword, user.getPassword())) {
-            throw new RuntimeException("原密码错误");
+            throw new BusinessException("原密码错误");
         }
         user.setPassword(passwordEncoder.encode(newPassword));
         userMapper.updateById(user);

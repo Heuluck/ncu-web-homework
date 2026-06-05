@@ -1,5 +1,7 @@
 package com.ncu.chat.controller;
 
+import com.ncu.chat.common.BusinessException;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.ncu.chat.common.PageResult;
@@ -40,7 +42,7 @@ public class AdminController {
         Long userId = (Long) request.getAttribute("userId");
         User user = userMapper.selectById(userId);
         if (user == null || user.getRole() == null || user.getRole() != 1) {
-            throw new RuntimeException("无权访问，需要管理员权限");
+            throw new BusinessException("无权访问，需要管理员权限");
         }
     }
 
@@ -87,9 +89,9 @@ public class AdminController {
     public Result<Void> toggleUserStatus(@PathVariable Long id, @RequestBody Map<String, Integer> body, HttpServletRequest request) {
         checkAdmin(request);
         User user = userMapper.selectById(id);
-        if (user == null) throw new RuntimeException("用户不存在");
+        if (user == null) throw new BusinessException("用户不存在");
         Integer enabled = body.get("enabled");
-        if (enabled == null) throw new RuntimeException("缺少 enabled 参数");
+        if (enabled == null) throw new BusinessException("缺少 enabled 参数");
         user.setEnabled(enabled);
         userMapper.updateById(user);
         return Result.success();
@@ -99,7 +101,7 @@ public class AdminController {
     public Result<Void> resetPassword(@PathVariable Long id, HttpServletRequest request) {
         checkAdmin(request);
         User user = userMapper.selectById(id);
-        if (user == null) throw new RuntimeException("用户不存在");
+        if (user == null) throw new BusinessException("用户不存在");
         user.setPassword(passwordEncoder.encode("123456"));
         userMapper.updateById(user);
         return Result.success();
@@ -148,7 +150,7 @@ public class AdminController {
     public Result<Void> disbandGroup(@PathVariable Long id, HttpServletRequest request) {
         checkAdmin(request);
         ChatGroup group = chatGroupMapper.selectById(id);
-        if (group == null) throw new RuntimeException("群聊不存在");
+        if (group == null) throw new BusinessException("群聊不存在");
         // 删除群聊及成员
         groupMemberMapper.delete(new LambdaQueryWrapper<GroupMember>().eq(GroupMember::getGroupId, id));
         chatGroupMapper.deleteById(id);
@@ -187,7 +189,7 @@ public class AdminController {
         String title = (String) body.get("title");
         String content = (String) body.get("content");
         Integer isPublished = body.get("isPublished") != null ? ((Number) body.get("isPublished")).intValue() : 0;
-        if (title == null || title.isEmpty()) throw new RuntimeException("标题不能为空");
+        if (title == null || title.isEmpty()) throw new BusinessException("标题不能为空");
         return Result.success(announcementService.createAnnouncement(userId, title, content, isPublished));
     }
 
@@ -225,7 +227,7 @@ public class AdminController {
         String word = (String) body.get("word");
         String category = (String) body.get("category");
         Integer enabled = body.get("enabled") != null ? ((Number) body.get("enabled")).intValue() : 1;
-        if (word == null || word.isEmpty()) throw new RuntimeException("敏感词不能为空");
+        if (word == null || word.isEmpty()) throw new BusinessException("敏感词不能为空");
         return Result.success(sensitiveWordService.addSensitiveWord(word, category, enabled));
     }
 

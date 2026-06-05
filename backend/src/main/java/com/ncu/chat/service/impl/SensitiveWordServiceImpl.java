@@ -1,5 +1,7 @@
 package com.ncu.chat.service.impl;
 
+import com.ncu.chat.common.BusinessException;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.ncu.chat.common.PageResult;
@@ -34,7 +36,7 @@ public class SensitiveWordServiceImpl implements SensitiveWordService {
         LambdaQueryWrapper<SensitiveWord> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(SensitiveWord::getWord, word);
         if (sensitiveWordMapper.selectCount(wrapper) > 0) {
-            throw new RuntimeException("敏感词已存在");
+            throw new BusinessException("敏感词已存在");
         }
         SensitiveWord sw = new SensitiveWord();
         sw.setWord(word);
@@ -48,13 +50,13 @@ public class SensitiveWordServiceImpl implements SensitiveWordService {
     public SensitiveWord updateSensitiveWord(Long id, String word, String category, Integer enabled) {
         SensitiveWord sw = sensitiveWordMapper.selectById(id);
         if (sw == null) {
-            throw new RuntimeException("敏感词不存在");
+            throw new BusinessException("敏感词不存在");
         }
         if (word != null && !word.equals(sw.getWord())) {
             LambdaQueryWrapper<SensitiveWord> wrapper = new LambdaQueryWrapper<>();
             wrapper.eq(SensitiveWord::getWord, word);
             if (sensitiveWordMapper.selectCount(wrapper) > 0) {
-                throw new RuntimeException("敏感词已存在");
+                throw new BusinessException("敏感词已存在");
             }
             sw.setWord(word);
         }

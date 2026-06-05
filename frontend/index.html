@@ -558,44 +558,31 @@
       EmojiPicker.show('emojiPicker', (emojiName, emojiChar) => {
         console.log('[表情] 选择表情:', emojiName, emojiChar);
         
-        // 构建请求体
-        const body = {
-          content: emojiName,
-          messageType: 1,
-          fileUrl: emojiChar
-        };
-        
-        // 判断是群聊还是私聊
-        let url = '';
         if (GroupManager.currentGroupId) {
-          url = `/api/group/message/send`;
-          body.groupId = GroupManager.currentGroupId;
+          // 群聊：HTTP API（后端会自动广播 WebSocket）
+          const token = Auth.getToken();
+          fetch('/api/group/message/send', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+              content: emojiName,
+              messageType: 1,
+              fileUrl: emojiChar,
+              groupId: GroupManager.currentGroupId
+            })
+          }).then(res => res.json())
+            .then(data => console.log('[表情] 发送结果:', data))
+            .catch(err => console.error('[表情] 发送失败:', err));
         } else if (ChatManager.currentFriendId) {
-          url = `/api/message/private/send`;
-          body.receiverId = ChatManager.currentFriendId;
-        }
-        
-        if (!url) {
+          // 私聊：通过 WebSocket 发送（与文字消息一致，确保实时广播）
+          ChatManager.sendMessage(emojiName, 1, emojiChar);
+        } else {
           Utils.showToast('请先选择一个聊天对象', 'warning');
           return;
         }
-        
-        // 使用 fetch 直接发送，避免 JSON.stringify 转义 emoji
-        const token = Auth.getToken();
-        fetch(url, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify(body)
-        }).then(res => res.json())
-          .then(data => {
-            console.log('[表情] 发送结果:', data);
-          })
-          .catch(err => {
-            console.error('[表情] 发送失败:', err);
-          });
         
         // 关闭表情选择器
         emojiPickerContainer.classList.remove('active');

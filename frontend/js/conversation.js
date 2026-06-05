@@ -225,9 +225,14 @@ const ConversationManager = {
     const friendId = msg.senderId === myId ? msg.receiverId : msg.senderId;
     const existing = this.conversations.find(c => c._type === 'private' && c.friendId === friendId);
 
+    // 判断是否是 emoji 表情（messageType=1 且 fileUrl 长度 <= 10）
+    const isEmoji = msg.messageType === 1 && msg.fileUrl && msg.fileUrl.length <= 10;
+    const previewContent = isEmoji ? msg.fileUrl : msg.content;
+    const previewType = isEmoji ? '' : this._getMessageTypeText(msg.messageType);
+
     if (existing) {
-      existing.lastMessage = msg.content;
-      existing.lastMessageType = this._getMessageTypeText(msg.messageType);
+      existing.lastMessage = previewContent;
+      existing.lastMessageType = previewType;
       existing.lastTime = msg.createTime;
       if (msg.senderId !== myId && ChatManager.currentFriendId !== friendId) {
         existing.unreadCount = (existing.unreadCount || 0) + 1;
@@ -244,9 +249,14 @@ const ConversationManager = {
     const groupId = msg.groupId;
     const existing = this.conversations.find(c => c._type === 'group' && c._id === groupId);
 
+    // 判断是否是 emoji 表情（messageType=1 且 fileUrl 长度 <= 10）
+    const isEmoji = msg.messageType === 1 && msg.fileUrl && msg.fileUrl.length <= 10;
+    const previewContent = isEmoji ? msg.fileUrl : msg.content;
+    const previewType = isEmoji ? '' : this._getMessageTypeText(msg.messageType);
+
     if (existing) {
-      existing.lastMessage = msg.content;
-      existing.lastMessageType = this._getMessageTypeText(msg.messageType);
+      existing.lastMessage = previewContent;
+      existing.lastMessageType = previewType;
       existing.lastTime = msg.createTime;
       if (msg.senderId !== Auth.getUserId() && GroupManager.currentGroupId !== groupId) {
         existing.unreadCount = (existing.unreadCount || 0) + 1;

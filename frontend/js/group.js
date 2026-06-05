@@ -375,7 +375,9 @@ const GroupManager = {
     _updateGroupInList(msg) {
         const group = this.groups.find(g => g.groupId === msg.groupId);
         if (group) {
-            group.lastMessage = msg.content;
+            // emoji 表情消息：显示表情符号而非名称
+            const isEmoji = msg.messageType === 1 && msg.fileUrl && msg.fileUrl.length <= 10;
+            group.lastMessage = isEmoji ? msg.fileUrl : msg.content;
             group.lastTime = msg.createTime;
             if (msg.senderId !== Auth.getUserId() && this.currentGroupId !== msg.groupId) {
                 group.unreadCount = (group.unreadCount || 0) + 1;

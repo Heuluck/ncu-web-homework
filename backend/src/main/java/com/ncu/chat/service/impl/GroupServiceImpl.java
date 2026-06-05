@@ -190,9 +190,16 @@ public class GroupServiceImpl implements GroupService {
             vo.setGroupAvatar(group.getAvatar());
             vo.setAnnouncement(group.getAnnouncement());
             if (lastMsg != null) {
-                vo.setLastMessage(lastMsg.getContent());
+                // emoji 表情消息：显示表情符号而非 [图片]
+                if (lastMsg.getMessageType() != null && lastMsg.getMessageType() == 1
+                        && lastMsg.getFileUrl() != null && lastMsg.getFileUrl().length() <= 10) {
+                    vo.setLastMessage(lastMsg.getFileUrl());
+                    vo.setLastMessageType("");
+                } else {
+                    vo.setLastMessage(lastMsg.getContent());
+                    vo.setLastMessageType(getMessageTypeText(lastMsg.getMessageType()));
+                }
                 vo.setLastTime(lastMsg.getCreateTime());
-                vo.setLastMessageType(getMessageTypeText(lastMsg.getMessageType()));
             }
             result.add(vo);
         }

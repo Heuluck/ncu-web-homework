@@ -1,5 +1,7 @@
 package com.ncu.chat.service.impl;
 
+import com.ncu.chat.common.BusinessException;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.ncu.chat.common.PageResult;
@@ -40,7 +42,7 @@ public class PrivateMessageServiceImpl implements PrivateMessageService {
         // 检查好友关系及拉黑状态
         Friendship friendship = friendshipMapper.findByUserPair(senderId, dto.getReceiverId());
         if (friendship == null || friendship.getStatus() != 1) {
-            throw new RuntimeException("你们还不是好友，无法发送消息");
+            throw new BusinessException("你们还不是好友，无法发送消息");
         }
         // 双向拉黑检查
         boolean blocked;
@@ -52,7 +54,7 @@ public class PrivateMessageServiceImpl implements PrivateMessageService {
                    || (friendship.getRequesterBlocked() != null && friendship.getRequesterBlocked() == 1);
         }
         if (blocked) {
-            throw new RuntimeException("由于拉黑限制，无法发送消息");
+            throw new BusinessException("由于拉黑限制，无法发送消息");
         }
 
         // 持久化消息

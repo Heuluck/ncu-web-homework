@@ -10,10 +10,22 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    /**
+     * 业务异常 — 消息可安全展示给前端
+     */
+    @ExceptionHandler(BusinessException.class)
+    public Result<?> handleBusinessException(BusinessException e) {
+        log.warn("业务异常: {}", e.getMessage());
+        return Result.error(e.getCode(), e.getMessage());
+    }
+
+    /**
+     * 运行时异常 — 不暴露原始错误信息给前端
+     */
     @ExceptionHandler(RuntimeException.class)
     public Result<?> handleRuntimeException(RuntimeException e) {
         log.error("RuntimeException: {}", e.getMessage(), e);
-        return Result.error(e.getMessage());
+        return Result.error("服务器内部错误，请稍后重试");
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

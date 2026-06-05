@@ -13,6 +13,8 @@ const WebSocketManager = {
   _connectCallbacks: [],
   _disconnectCallbacks: [],
   _groupMessageCallbacks: [],  // 群聊消息回调数组
+  _voiceMessageCallbacks: [],  // 语音消息回调数组
+  _callSignalCallbacks: [],    // 通话信令回调数组
 
   connect() {
     const token = Auth.getToken();
@@ -85,7 +87,6 @@ const WebSocketManager = {
         console.error('[WS] 群消息解析失败:', e);
       }
     });
-
     // 好友拉黑/解除状态变更通知
     this.stompClient.subscribe('/user/queue/friend-status', (message) => {
       try {
@@ -94,6 +95,30 @@ const WebSocketManager = {
           FriendManager.onBlockStatusChange(data);
         }
       } catch (e) { console.error('[WS] 好友状态解析失败:', e); }
+    });
+
+    // 语音消息订阅
+    this.stompClient.subscribe('/user/queue/voice_messages', (message) => {
+      try {
+        const data = JSON.parse(message.body);
+        if (this._voiceMessageCallbacks) {
+          this._voiceMessageCallbacks.forEach(cb => cb(data));
+        }
+      } catch (e) {
+        console.error('[WS] 语音消息解析失败:', e);
+      }
+    });
+
+    // 通话信令订阅
+    this.stompClient.subscribe('/user/queue/call', (message) => {
+      try {
+        const data = JSON.parse(message.body);
+        if (this._callSignalCallbacks) {
+          this._callSignalCallbacks.forEach(cb => cb(data));
+        }
+      } catch (e) {
+        console.error('[WS] 通话信令解析失败:', e);
+      }
     });
   },
 
@@ -123,13 +148,47 @@ const WebSocketManager = {
     this._groupMessageCallbacks.push(cb);
   },
 
+  // 注册语音消息回调
+  onVoiceMessage(cb) {
+    this._voiceMessageCallbacks.push(cb);
+  },
+
+  // 注册通话信令回调
+  onCallSignal(cb) {
+    this._callSignalCallbacks.push(cb);
+  },
+
   // 发送群聊消息
-  sendGroupMessage(groupId, content, messageType = 0) {
+  sendGroupMessage(groupId, content, messageType = 0, fileUrl = null) {
     if (!this.stompClient || !this.connected) {
       console.error('[WS] 未连接');
       return false;
     }
-    this.stompClient.send('/app/group.send', {}, JSON.stringify({ groupId, content, messageType }));
+    this.stompClient.send('/app/group.send', {}, JSON.stringify({
+      groupId, content, messageType, fileUrl
+    }));
+    return true;
+  },
+
+  // 发送语音消息（WebSocket）
+  sendVoice(to, audioUrl, duration, groupId = null) {
+    if (!this.stompClient || !this.connected) {
+      console.error('[WS] 未连接，无法发送语音');
+      return false;
+    }
+    this.stompClient.send('/app/voice.send', {}, JSON.stringify({
+      to: to,
+      groupId: groupId,
+      fileUrl: audioUrl,
+      duration: duration
+    }));
+    return true;
+  },
+
+  // 发送通话信令
+  sendCallSignal(destination, payload) {
+    if (!this.stompClient || !this.connected) return false;
+    this.stompClient.send('/app/call.' + payload.type, {}, JSON.stringify(payload));
     return true;
   },
 

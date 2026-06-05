@@ -170,14 +170,13 @@ const GroupManager = {
         const isSelf = msg.senderId === myId;
         const avatarSrc = Utils.getAvatarUrl(msg.senderAvatar, `user-${msg.senderId}`);
         const time = Utils.formatMessageTime(msg.createTime);
+        const escapedContent = Utils.escapeHtml(msg.content);
 
-        // 根据消息类型渲染不同内容
         let contentHtml = '';
         const messageType = msg.messageType || 0;
 
         if (messageType === 1) {
             // 图片消息 - 检查是否是 emoji 表情
-            // 先解码 URL 编码的 emoji 字符
             let fileUrl = msg.fileUrl;
             if (fileUrl && fileUrl.startsWith('http://localhost:8080/')) {
                 try {
@@ -186,7 +185,6 @@ const GroupManager = {
                     console.error('解码失败:', e);
                 }
             }
-            
             if (fileUrl && fileUrl.length <= 10) {
                 // 是 emoji 表情，直接显示
                 contentHtml = `<span style="font-size: 28px;vertical-align:middle;">${fileUrl}</span>`;
@@ -194,17 +192,19 @@ const GroupManager = {
                 // 普通图片 - 点击弹出预览
                 contentHtml = `<img src="${msg.fileUrl}" alt="图片" class="message-image" onclick="GroupManager.showImagePreview('${msg.fileUrl}')">`;
             } else {
-                contentHtml = `<div class="message-text">${Utils.escapeHtml(msg.content)}</div>`;
+                contentHtml = `<div class="message-text">${escapedContent}</div>`;
             }
         } else if (messageType === 2) {
             // 文件消息
-            contentHtml = `<a href="${msg.fileUrl}" target="_blank" class="message-file">📎 ${Utils.escapeHtml(msg.content)}</a>`;
+            contentHtml = `<a href="${msg.fileUrl}" target="_blank" class="message-file">📎 ${escapedContent}</a>`;
         } else if (messageType === 3) {
             // 语音消息
-            contentHtml = `<div class="message-voice"><i data-lucide="mic" style="width:16px;height:16px;"></i> ${Utils.escapeHtml(msg.content)}</div>`;
+            contentHtml = (typeof VoiceManager !== 'undefined' && VoiceManager.renderVoiceBubble)
+                ? VoiceManager.renderVoiceBubble(msg, isSelf)
+                : `<div class="message-voice"><i data-lucide="mic" style="width:16px;height:16px;"></i> ${escapedContent}</div>`;
         } else {
             // 文字消息
-            contentHtml = `<div class="message-text">${Utils.escapeHtml(msg.content)}</div>`;
+            contentHtml = `<div class="message-text">${escapedContent}</div>`;
         }
 
         if (isSelf) {

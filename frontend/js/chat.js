@@ -212,7 +212,20 @@ const ChatManager = {
         contentHtml = `<a href="${msg.fileUrl}" target="_blank" class="message-file">📎 ${escapedContent}</a>`;
         break;
       case 3:
-        contentHtml = `<div class="message-voice"><i data-lucide="mic" style="width:16px;height:16px;"></i> ${escapedContent}</div>`;
+        contentHtml = (typeof VoiceManager !== 'undefined' && VoiceManager.renderVoiceBubble)
+          ? VoiceManager.renderVoiceBubble(msg, isSelf)
+          : `<div class="message-voice"><i data-lucide="mic" style="width:16px;height:16px;"></i> ${escapedContent}</div>`;
+        break;
+      case 4:
+        // 通话记录：根据 isSelf 区分双方看到的文案
+        // senderId 始终是拨打方，所以 isSelf 意味着"我是拨打方"
+        let callDisplay = escapedContent;
+        if (escapedContent === '已取消') {
+          callDisplay = isSelf ? '已取消' : '对方已取消';
+        } else if (escapedContent === '对方已拒绝') {
+          callDisplay = isSelf ? '对方已拒绝' : '已拒绝';
+        }
+        contentHtml = `<div class="message-call"><i data-lucide="phone" style="width:14px;height:14px;"></i> 语音通话 · ${callDisplay}</div>`;
         break;
       default:
         contentHtml = `<div class="message-text">${escapedContent}</div>`;
@@ -318,10 +331,18 @@ const ChatManager = {
   },
 
   receiveMessage(msg) {
+    // 去重：防止同一条消息渲染两次
+    if (msg.id && this._renderedMsgIds && this._renderedMsgIds.has(msg.id)) return;
+    if (!this._renderedMsgIds) this._renderedMsgIds = new Set();
+    if (msg.id) this._renderedMsgIds.add(msg.id);
+
     const myId = Auth.getUserId();
     const friendId = msg.senderId === myId ? msg.receiverId : msg.senderId;
 
-    ConversationManager.addOrUpdateConversation(msg);
+    // 语音消息的会话预览显示为 [语音]
+    const convMsg = { ...msg };
+    if (convMsg.messageType === 3) convMsg.content = '[语音]';
+    ConversationManager.addOrUpdateConversation(convMsg);
 
     if (this.currentFriendId === friendId) {
       this._appendBubble(msg);

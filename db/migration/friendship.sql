@@ -5,6 +5,8 @@ CREATE TABLE IF NOT EXISTS `friendship` (
     `requester_id` BIGINT NOT NULL COMMENT '发起者用户ID',
     `receiver_id` BIGINT NOT NULL COMMENT '接收者用户ID',
     `status` TINYINT DEFAULT 0 COMMENT '0-待处理 1-已接受 2-已拒绝 3-已拉黑',
+    `requester_blocked` TINYINT DEFAULT 0 COMMENT '发起者是否拉黑对方',
+    `receiver_blocked` TINYINT DEFAULT 0 COMMENT '接收者是否拉黑对方',
     `requester_group_id` BIGINT DEFAULT NULL COMMENT '发起者的分组ID',
     `receiver_group_id` BIGINT DEFAULT NULL COMMENT '接收者的分组ID',
     `verification_message` VARCHAR(255) DEFAULT NULL COMMENT '验证信息',

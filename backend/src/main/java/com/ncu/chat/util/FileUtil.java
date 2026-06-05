@@ -1,5 +1,7 @@
 package com.ncu.chat.util;
 
+import com.ncu.chat.common.BusinessException;
+
 import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -43,7 +45,7 @@ public class FileUtil {
 
     public String upload(MultipartFile file) throws IOException {
         if (file.isEmpty()) {
-            throw new RuntimeException("文件不能为空");
+            throw new BusinessException("文件不能为空");
         }
 
         String originalFilename = file.getOriginalFilename();
@@ -51,7 +53,7 @@ public class FileUtil {
 
         List<String> allowed = Arrays.asList(allowedTypes.split(","));
         if (!allowed.contains(extension)) {
-            throw new RuntimeException("不支持的文件类型: " + extension);
+            throw new BusinessException("不支持的文件类型: " + extension);
         }
 
         String filename = UUID.randomUUID().toString() + "." + extension;

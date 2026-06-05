@@ -2,10 +2,12 @@ package com.ncu.chat.websocket;
 
 import com.ncu.chat.mapper.FriendshipMapper;
 import com.ncu.chat.mapper.GroupMemberMapper;
+import com.ncu.chat.mapper.GroupMessageMapper;
 import com.ncu.chat.mapper.PrivateMessageMapper;
 import com.ncu.chat.mapper.UserMapper;
 import com.ncu.chat.model.entity.Friendship;
 import com.ncu.chat.model.entity.GroupMember;
+import com.ncu.chat.model.entity.GroupMessage;
 import com.ncu.chat.model.entity.PrivateMessage;
 import com.ncu.chat.model.entity.User;
 import com.ncu.chat.model.vo.PrivateMessageVO;
@@ -34,6 +36,7 @@ public class ChatController {
     private final FriendshipMapper friendshipMapper;
     private final VoiceMessageService voiceMessageService;
     private final GroupMemberMapper groupMemberMapper;
+    private final GroupMessageMapper groupMessageMapper;
 
     /**
      * 处理客户端发送的私聊消息
@@ -150,20 +153,20 @@ public class ChatController {
                 senderId, payload.getTo(), payload.getGroupId(),
                 payload.getFileUrl(), payload.getDuration());
 
-        // 同时写入 private_message 表，确保历史记录可查询
-        PrivateMessage pm = new PrivateMessage();
-        pm.setSenderId(senderId);
-        pm.setReceiverId(payload.getTo());
-        pm.setContent(String.valueOf(payload.getDuration()));
-        pm.setMessageType(3);
-        pm.setFileUrl(payload.getFileUrl());
-        pm.setStatus(0);
-        privateMessageMapper.insert(pm);
-
         User sender = userMapper.selectById(senderId);
 
         if (payload.getGroupId() != null) {
-            // 群聊语音消息：推送给所有群成员
+            // 群聊语音消息：保存到 group_message 表
+            GroupMessage gm = new GroupMessage();
+            gm.setGroupId(payload.getGroupId());
+            gm.setSenderId(senderId);
+            gm.setContent(String.valueOf(payload.getDuration()));
+            gm.setMessageType(3);
+            gm.setFileUrl(payload.getFileUrl());
+            gm.setIsRecall(0);
+            groupMessageMapper.insert(gm);
+
+            // 推送给所有群成员
             List<GroupMember> members = groupMemberMapper.selectList(
                     new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<GroupMember>()
                             .eq(GroupMember::getGroupId, payload.getGroupId()));
@@ -173,8 +176,20 @@ public class ChatController {
                             String.valueOf(member.getUserId()), "/queue/voice_messages", vo);
                 }
             }
+            // 也推送给发送者自己（多端同步）
+            messagingTemplate.convertAndSendToUser(
+                    String.valueOf(senderId), "/queue/voice_messages", vo);
         } else if (payload.getTo() != null) {
-            // 私聊语音消息
+            // 私聊语音消息：保存到 private_message 表
+            PrivateMessage pm = new PrivateMessage();
+            pm.setSenderId(senderId);
+            pm.setReceiverId(payload.getTo());
+            pm.setContent(String.valueOf(payload.getDuration()));
+            pm.setMessageType(3);
+            pm.setFileUrl(payload.getFileUrl());
+            pm.setStatus(0);
+            privateMessageMapper.insert(pm);
+
             messagingTemplate.convertAndSendToUser(
                     String.valueOf(payload.getTo()), "/queue/voice_messages", vo);
             // 推送给发送者自己（多端同步）

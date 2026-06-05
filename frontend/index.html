@@ -325,7 +325,7 @@
         <button class="btn-icon" id="chatHistoryBtn" title="聊天记录">
           <i data-lucide="message-square"></i>
         </button>
-        <button class="btn-icon" title="语音通话" onclick="var info=ChatManager.currentFriendInfo; CallManager.startCall(ChatManager.currentFriendId, info?info.nickname:'用户', document.getElementById('chatAvatar')?.src||'')">
+        <button class="btn-icon" id="voiceCallBtn" title="语音通话" onclick="var info=ChatManager.currentFriendInfo; CallManager.startCall(ChatManager.currentFriendId, info?info.nickname:'用户', document.getElementById('chatAvatar')?.src||'')">
           <i data-lucide="phone"></i>
         </button>
         <button class="btn-icon" id="chatMoreBtn" title="查看更多">

@@ -306,6 +306,7 @@ public class GroupServiceImpl implements GroupService {
         vo.setGroupId(msg.getGroupId());
         vo.setSenderId(userId);
         vo.setSenderNickname(sender != null ? sender.getNickname() : "");
+        vo.setSenderAvatar(sender != null ? sender.getAvatar() : null);
         vo.setContent(msg.getContent());
         vo.setMessageType(msg.getMessageType());
         vo.setFileUrl(msg.getFileUrl());
@@ -334,8 +335,13 @@ public class GroupServiceImpl implements GroupService {
             vo.setSenderId(msg.getSenderId());
             vo.setContent(msg.getContent());
             vo.setMessageType(msg.getMessageType());
+            vo.setFileUrl(msg.getFileUrl());
             vo.setCreateTime(msg.getCreateTime());
             vo.setIsSelf(msg.getSenderId().equals(userId));
+            // 填充发送者信息
+            User sender = userMapper.selectById(msg.getSenderId());
+            vo.setSenderNickname(sender != null ? sender.getNickname() : "未知用户");
+            vo.setSenderAvatar(sender != null ? sender.getAvatar() : null);
             voList.add(vo);
         }
         Collections.reverse(voList);

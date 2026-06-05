@@ -1,15 +1,44 @@
 /**
- * 会话列表管理
+ * 会话列表管理（支持私聊 + 群聊混合显示）
  */
 const ConversationManager = {
   conversations: [],
 
   async loadConversations() {
+    // 加载私聊最近会话
     const res = await API.get('/api/message/private/recent');
+    let privateList = [];
     if (res && res.code === 200) {
-      this.conversations = res.data || [];
-      this.renderList();
+      privateList = (res.data || []).map(c => ({ ...c, _type: 'private', _id: c.friendId }));
     }
+
+    // 加载群聊最近会话
+    let groupList = [];
+    if (typeof GroupManager !== 'undefined' && GroupManager.groups) {
+      groupList = GroupManager.groups.map(g => ({
+        _type: 'group',
+        _id: g.groupId,
+        friendId: g.groupId,
+        nickname: g.groupName,
+        avatar: g.groupAvatar,
+        lastMessage: g.lastMessage || '',
+        lastTime: g.lastTime || null,
+        unreadCount: g.unreadCount || 0,
+        onlineStatus: 0
+      }));
+    }
+
+    // 合并并按时间排序
+    const merged = [...privateList, ...groupList];
+    merged.sort((a, b) => {
+      if (!a.lastTime && !b.lastTime) return 0;
+      if (!a.lastTime) return 1;
+      if (!b.lastTime) return -1;
+      return new Date(b.lastTime) - new Date(a.lastTime);
+    });
+
+    this.conversations = merged;
+    this.renderList();
   },
 
   renderList() {
@@ -46,8 +75,9 @@ const ConversationManager = {
 
     container.querySelectorAll('.list-item').forEach(item => {
       item.addEventListener('click', () => {
-        const friendId = parseInt(item.dataset.friendId);
-        this.selectConversation(friendId);
+        const id = parseInt(item.dataset.friendId);
+        const type = item.dataset.convType || 'private';
+        this.selectConversation(id, type);
       });
     });
 
@@ -55,9 +85,14 @@ const ConversationManager = {
   },
 
   _renderItem(conv) {
-    const isActive = ChatManager.currentFriendId === conv.friendId;
-    const statusClass = Utils.getStatusClass(conv.onlineStatus);
-    const avatarSrc = Utils.getAvatarUrl(conv.avatar, `user-${conv.friendId}`);
+    const isGroup = conv._type === 'group';
+    const isActive = isGroup
+      ? (typeof GroupManager !== 'undefined' && GroupManager.currentGroupId === conv._id)
+      : (ChatManager.currentFriendId === conv.friendId);
+    const statusClass = isGroup ? '' : Utils.getStatusClass(conv.onlineStatus);
+    const avatarSrc = isGroup
+      ? (conv.avatar || '')
+      : Utils.getAvatarUrl(conv.avatar, `user-${conv.friendId}`);
     const timeText = conv.lastTime ? Utils.formatTime(conv.lastTime) : '';
     const lastMsg = conv.lastMessageType
       ? conv.lastMessageType
@@ -65,12 +100,16 @@ const ConversationManager = {
     const unreadBadge = conv.unreadCount > 0
       ? `<span class="badge">${conv.unreadCount > 99 ? '99+' : conv.unreadCount}</span>`
       : '';
+    // 群聊头像：有图用图，无图用群名首字
+    const avatarHtml = isGroup && !conv.avatar
+      ? `<div class="avatar avatar-md" style="background:var(--color-primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:600;">${Utils.escapeHtml((conv.nickname || '?')[0])}</div>`
+      : `<img src="${avatarSrc}" alt="${Utils.escapeHtml(conv.nickname)}" class="avatar avatar-md">`;
 
     return `
-      <div class="list-item${isActive ? ' active' : ''}" data-friend-id="${conv.friendId}">
+      <div class="list-item${isActive ? ' active' : ''}" data-friend-id="${conv._id}" data-conv-type="${conv._type || 'private'}">
         <div class="avatar-wrapper">
-          <img src="${avatarSrc}" alt="${Utils.escapeHtml(conv.nickname)}" class="avatar avatar-md">
-          <span class="status-indicator ${statusClass}"></span>
+          ${avatarHtml}
+          ${!isGroup ? `<span class="status-indicator ${statusClass}"></span>` : ''}
         </div>
         <div class="list-item-content">
           <div class="list-item-header">
@@ -85,17 +124,39 @@ const ConversationManager = {
       </div>`;
   },
 
-  selectConversation(friendId) {
+  selectConversation(id, type) {
+    type = type || 'private';
     document.querySelectorAll('#conversationList .list-item').forEach(item => {
-      item.classList.toggle('active', parseInt(item.dataset.friendId) === friendId);
+      item.classList.toggle('active', parseInt(item.dataset.friendId) === id);
     });
-    ChatManager.openChat(friendId);
+    if (type === 'group') {
+      // 切换到群聊时清除私聊状态
+      ChatManager.currentFriendId = null;
+      ChatManager.currentFriendInfo = null;
+      if (typeof GroupManager !== 'undefined') {
+        GroupManager.openGroupChat(id);
+      }
+    } else {
+      // 切换到私聊时清除群聊状态
+      if (typeof GroupManager !== 'undefined') {
+        GroupManager.currentGroupId = null;
+        GroupManager.currentGroupInfo = null;
+      }
+      // 隐藏群聊专属按钮
+      const membersBtn = document.getElementById('groupMembersBtn');
+      const settingsBtn = document.getElementById('groupSettingsBtn');
+      const callBtn2 = document.getElementById('voiceCallBtn');
+      if (membersBtn) membersBtn.style.display = 'none';
+      if (settingsBtn) settingsBtn.style.display = 'none';
+      if (callBtn2) callBtn2.style.display = 'inline-flex'; // 私聊显示语音通话
+      ChatManager.openChat(id);
+    }
   },
 
   addOrUpdateConversation(msg) {
     const myId = Auth.getUserId();
     const friendId = msg.senderId === myId ? msg.receiverId : msg.senderId;
-    const existing = this.conversations.find(c => c.friendId === friendId);
+    const existing = this.conversations.find(c => c._type === 'private' && c.friendId === friendId);
 
     if (existing) {
       existing.lastMessage = msg.content;
@@ -104,7 +165,7 @@ const ConversationManager = {
       if (msg.senderId !== myId && ChatManager.currentFriendId !== friendId) {
         existing.unreadCount = (existing.unreadCount || 0) + 1;
       }
-      this.conversations = [existing, ...this.conversations.filter(c => c.friendId !== friendId)];
+      this.conversations = [existing, ...this.conversations.filter(c => !(c._type === 'private' && c.friendId === friendId))];
     } else {
       this.loadConversations();
       return;
@@ -112,8 +173,36 @@ const ConversationManager = {
     this.renderList();
   },
 
+  addOrUpdateGroupConversation(msg) {
+    const groupId = msg.groupId;
+    const existing = this.conversations.find(c => c._type === 'group' && c._id === groupId);
+
+    if (existing) {
+      existing.lastMessage = msg.content;
+      existing.lastMessageType = this._getMessageTypeText(msg.messageType);
+      existing.lastTime = msg.createTime;
+      if (msg.senderId !== Auth.getUserId() && GroupManager.currentGroupId !== groupId) {
+        existing.unreadCount = (existing.unreadCount || 0) + 1;
+      }
+      this.conversations = [existing, ...this.conversations.filter(c => !(c._type === 'group' && c._id === groupId))];
+    } else {
+      // 新群聊会话，重新加载
+      this.loadConversations();
+      return;
+    }
+    this.renderList();
+  },
+
   clearUnread(friendId) {
-    const conv = this.conversations.find(c => c.friendId === friendId);
+    const conv = this.conversations.find(c => c._type === 'private' && c.friendId === friendId);
+    if (conv) {
+      conv.unreadCount = 0;
+      this.renderList();
+    }
+  },
+
+  clearGroupUnread(groupId) {
+    const conv = this.conversations.find(c => c._type === 'group' && c._id === groupId);
     if (conv) {
       conv.unreadCount = 0;
       this.renderList();
@@ -121,7 +210,7 @@ const ConversationManager = {
   },
 
   updateOnlineStatus(userId, status) {
-    const conv = this.conversations.find(c => c.friendId === userId);
+    const conv = this.conversations.find(c => c._type === 'private' && c.friendId === userId);
     if (conv) {
       conv.onlineStatus = status;
       this.renderList();

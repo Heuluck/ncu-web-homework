@@ -44,8 +44,13 @@ const ChatManager = {
     }
 
     document.getElementById('chatHeader').style.display = '';
-    document.getElementById('chatAvatar').src = Utils.getAvatarUrl(info.avatar, `user-${info.friendId}`);
-    document.getElementById('chatAvatar').alt = info.nickname;
+    const avatarEl = document.getElementById('chatAvatar');
+    avatarEl.src = Utils.getAvatarUrl(info.avatar, `user-${info.friendId}`);
+    avatarEl.alt = info.nickname;
+    avatarEl.style.display = ''; // 恢复显示（群聊可能隐藏了）
+    // 移除群聊字母头像
+    const letterAvatar = avatarEl.parentElement?.querySelector('.group-letter-avatar');
+    if (letterAvatar) letterAvatar.remove();
 
     let nameHtml = Utils.escapeHtml(info.nickname || '');
     if (info.blockStatus === 'blocked_by_me') nameHtml += ' <span style="color:var(--color-danger);font-size:12px;">(已拉黑)</span>';

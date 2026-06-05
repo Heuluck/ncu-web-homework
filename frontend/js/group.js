@@ -17,6 +17,10 @@ const GroupManager = {
         if (res && res.code === 200) {
             this.groups = res.data || [];
             this.renderGroupList();
+            // 同步到最近会话列表
+            if (typeof ConversationManager !== 'undefined') {
+                ConversationManager.loadConversations();
+            }
         }
     },
 
@@ -83,8 +87,10 @@ const GroupManager = {
         // 显示群聊头部按钮
         const membersBtn = document.getElementById('groupMembersBtn');
         const settingsBtn = document.getElementById('groupSettingsBtn');
+        const callBtn = document.getElementById('voiceCallBtn');
         if (membersBtn) membersBtn.style.display = 'inline-flex';
         if (settingsBtn) settingsBtn.style.display = 'inline-flex';
+        if (callBtn) callBtn.style.display = 'none'; // 群聊隐藏语音通话
 
         const infoRes = await API.get(`/api/group/info/${groupId}`);
         if (infoRes && infoRes.code === 200) {
@@ -99,12 +105,32 @@ const GroupManager = {
         await this.loadGroupMessages(groupId, 1, true);
         this._markGroupRead(groupId);
         this._clearGroupUnread(groupId);
+        // 清除最近会话列表中的群聊未读
+        if (typeof ConversationManager !== 'undefined') {
+            ConversationManager.clearGroupUnread(groupId);
+        }
     },
 
     _renderGroupHeader() {
         if (!this.currentGroupInfo) return;
         document.getElementById('chatHeader').style.display = '';
-        document.getElementById('chatAvatar').src = Utils.getAvatarUrl(this.currentGroupInfo.avatar, `group-${this.currentGroupInfo.id}`);
+        const avatarEl = document.getElementById('chatAvatar');
+        if (this.currentGroupInfo.avatar) {
+            avatarEl.src = this.currentGroupInfo.avatar;
+            avatarEl.style.display = '';
+        } else {
+            // 无头像时用群名首字
+            avatarEl.style.display = 'none';
+            const wrapper = avatarEl.parentElement;
+            let letterEl = wrapper.querySelector('.group-letter-avatar');
+            if (!letterEl) {
+                letterEl = document.createElement('div');
+                letterEl.className = 'avatar avatar-md group-letter-avatar';
+                letterEl.style.cssText = 'background:var(--color-primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:600;';
+                wrapper.insertBefore(letterEl, avatarEl);
+            }
+            letterEl.textContent = (this.currentGroupInfo.name || '?')[0];
+        }
         document.getElementById('chatName').textContent = this.currentGroupInfo.name;
         document.getElementById('chatStatusText').textContent = `${this.currentGroupInfo.memberCount || 0} 人`;
     },
@@ -314,6 +340,10 @@ const GroupManager = {
             this.scrollToBottom();
         }
         this._updateGroupInList(msg);
+        // 同步到最近会话列表
+        if (typeof ConversationManager !== 'undefined') {
+            ConversationManager.addOrUpdateGroupConversation(msg);
+        }
     },
 
     _appendGroupBubble(msg) {

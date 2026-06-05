@@ -202,6 +202,7 @@ const GroupManager = {
         const escapedContent = Utils.escapeHtml(msg.content);
 
         let contentHtml = '';
+        let skipBubble = false;
         const messageType = msg.messageType || 0;
 
         if (messageType === 1) {
@@ -219,13 +220,15 @@ const GroupManager = {
                 contentHtml = `<span style="font-size: 28px;vertical-align:middle;">${fileUrl}</span>`;
             } else if (fileUrl) {
                 // 普通图片 - 点击弹出预览
-                contentHtml = `<img src="${msg.fileUrl}" alt="图片" class="message-image" onclick="GroupManager.showImagePreview('${msg.fileUrl}')">`;
+                skipBubble = true;
+                contentHtml = `<div class="message-image-wrap" onclick="GroupManager.showImagePreview('${msg.fileUrl}')"><img src="${msg.fileUrl}" alt="图片" class="message-image"><div class="image-overlay"><div class="image-overlay-icon"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1-2-2h6"/></svg></div></div></div>`;
             } else {
                 contentHtml = `<div class="message-text">${escapedContent}</div>`;
             }
         } else if (messageType === 2) {
             // 文件消息
-            contentHtml = `<a href="${msg.fileUrl}" target="_blank" class="message-file">📎 ${escapedContent}</a>`;
+            skipBubble = true;
+            contentHtml = `<a href="${msg.fileUrl}" target="_blank" class="message-file-card"><div class="file-icon"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></svg></div><div class="file-info"><div class="file-name">${escapedContent}</div><div class="file-meta">文件</div></div><div class="file-download"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg></div></a>`;
         } else if (messageType === 3) {
             // 语音消息
             contentHtml = (typeof VoiceManager !== 'undefined' && VoiceManager.renderVoiceBubble)
@@ -236,10 +239,11 @@ const GroupManager = {
             contentHtml = `<div class="message-text">${escapedContent}</div>`;
         }
 
+        const isMedia = msg.messageType === 1 || msg.messageType === 2;
         if (isSelf) {
-            return `<div class="message self"><div class="message-content"><div class="message-bubble">${contentHtml}</div><div class="message-meta"><span class="message-time">${time}</span></div></div></div>`;
+            return `<div class="message self"><div class="message-content">${skipBubble ? contentHtml : `<div class="message-bubble">${contentHtml}</div>`}<div class="message-meta"><span class="message-time">${time}</span></div></div></div>`;
         } else {
-            return `<div class="message"><img src="${avatarSrc}" class="avatar avatar-sm"><div class="message-content"><div class="message-header"><span class="message-sender">${Utils.escapeHtml(msg.senderNickname)}</span><span class="message-time">${time}</span></div><div class="message-bubble">${contentHtml}</div></div></div>`;
+            return `<div class="message"><img src="${avatarSrc}" class="avatar avatar-sm"><div class="message-content"><div class="message-header"><span class="message-sender">${Utils.escapeHtml(msg.senderNickname)}</span><span class="message-time">${time}</span></div>${skipBubble ? contentHtml : `<div class="message-bubble">${contentHtml}</div>`}</div></div>`;
         }
     },
 
@@ -355,6 +359,16 @@ const GroupManager = {
         if (emptyEl) emptyEl.remove();
         messagesEl.insertAdjacentHTML('beforeend', this._renderGroupBubble(msg, Auth.getUserId()));
         lucide.createIcons();
+
+        // 图片消息：等图片加载完成后再置底
+        const img = messagesEl.querySelector('.message:last-child .message-image');
+        if (img) {
+            if (img.complete) {
+                this.scrollToBottom();
+            } else {
+                img.onload = () => this.scrollToBottom();
+            }
+        }
     },
 
     _updateGroupInList(msg) {

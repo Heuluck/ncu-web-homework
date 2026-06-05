@@ -170,7 +170,42 @@ const GroupManager = {
         const isSelf = msg.senderId === myId;
         const avatarSrc = Utils.getAvatarUrl(msg.senderAvatar, `user-${msg.senderId}`);
         const time = Utils.formatMessageTime(msg.createTime);
-        const contentHtml = `<div class="message-text">${Utils.escapeHtml(msg.content)}</div>`;
+
+        // 根据消息类型渲染不同内容
+        let contentHtml = '';
+        const messageType = msg.messageType || 0;
+
+        if (messageType === 1) {
+            // 图片消息 - 检查是否是 emoji 表情
+            // 先解码 URL 编码的 emoji 字符
+            let fileUrl = msg.fileUrl;
+            if (fileUrl && fileUrl.startsWith('http://localhost:8080/')) {
+                try {
+                    fileUrl = decodeURIComponent(fileUrl.replace('http://localhost:8080/', ''));
+                } catch (e) {
+                    console.error('解码失败:', e);
+                }
+            }
+            
+            if (fileUrl && fileUrl.length <= 10) {
+                // 是 emoji 表情，直接显示
+                contentHtml = `<span style="font-size: 28px;vertical-align:middle;">${fileUrl}</span>`;
+            } else if (fileUrl) {
+                // 普通图片 - 点击弹出预览
+                contentHtml = `<img src="${msg.fileUrl}" alt="图片" class="message-image" onclick="GroupManager.showImagePreview('${msg.fileUrl}')">`;
+            } else {
+                contentHtml = `<div class="message-text">${Utils.escapeHtml(msg.content)}</div>`;
+            }
+        } else if (messageType === 2) {
+            // 文件消息
+            contentHtml = `<a href="${msg.fileUrl}" target="_blank" class="message-file">📎 ${Utils.escapeHtml(msg.content)}</a>`;
+        } else if (messageType === 3) {
+            // 语音消息
+            contentHtml = `<div class="message-voice"><i data-lucide="mic" style="width:16px;height:16px;"></i> ${Utils.escapeHtml(msg.content)}</div>`;
+        } else {
+            // 文字消息
+            contentHtml = `<div class="message-text">${Utils.escapeHtml(msg.content)}</div>`;
+        }
 
         if (isSelf) {
             return `<div class="message self"><div class="message-content"><div class="message-bubble">${contentHtml}</div><div class="message-meta"><span class="message-time">${time}</span></div></div></div>`;
@@ -184,20 +219,35 @@ const GroupManager = {
         this.loadGroupMessages(this.currentGroupId, this.currentPage + 1, false);
     },
 
-    sendGroupMessage() {
+    sendGroupMessage(content, messageType = 0, fileUrl = null) {
         const input = document.getElementById('messageInput');
-        const content = input.value.trim();
+        if (!content) {
+            content = input?.value.trim() || '';
+        }
+        
         if (!content || !this.currentGroupId) return;
 
+        // 检查是否包含表情标记 [emoji:名称:URL]
+        const emojiMatch = content.match(/\[emoji:([^\]]+):([^\]]+)\]/);
+        if (emojiMatch) {
+            // 是表情，发送表情 URL
+            content = emojiMatch[1]; // 表情名称
+            messageType = 1; // 图片类型
+            fileUrl = emojiMatch[2]; // 表情 URL
+        }
+
         // 清空输入框
-        input.value = '';
-        input.style.height = 'auto';
+        if (input) {
+            input.value = '';
+            input.style.height = 'auto';
+        }
 
         // 只使用 HTTP API 发送，后端会自动通过 WebSocket 广播
         API.post('/api/group/message/send', {
             groupId: this.currentGroupId,
             content: content,
-            messageType: 0
+            messageType: messageType,
+            fileUrl: fileUrl
         }).then(res => {
             if (res && res.code === 200) {
                 // 发送成功，后端会广播，前端通过 WebSocket 接收
@@ -208,7 +258,57 @@ const GroupManager = {
         });
     },
 
+    /**
+     * 发送群图片消息
+     */
+    async sendGroupImage(file) {
+        if (!this.currentGroupId) return;
+
+        console.log('[图片] 开始上传:', file.name);
+
+        // 上传文件
+        const uploadResult = await API.upload(file);
+        console.log('[图片] 上传结果:', uploadResult);
+        
+        if (!uploadResult || uploadResult.code !== 200) {
+            alert('图片上传失败');
+            return;
+        }
+
+        const fileUrl = uploadResult.data?.url;
+        console.log('[图片] fileUrl:', fileUrl);
+        
+        if (!fileUrl) {
+            alert('上传成功但未返回 URL');
+            return;
+        }
+        
+        // 发送图片消息
+        console.log('[图片] 发送消息:', { groupId: this.currentGroupId, content: file.name || '图片', messageType: 1, fileUrl: fileUrl });
+        this.sendGroupMessage(file.name || '图片', 1, fileUrl);
+    },
+
+    /**
+     * 发送群文件消息
+     */
+    async sendGroupFile(file) {
+        if (!this.currentGroupId) return;
+
+        // 上传文件
+        const uploadResult = await API.upload(file);
+        if (!uploadResult || uploadResult.code !== 200) {
+            alert('文件上传失败');
+            return;
+        }
+
+        const fileUrl = uploadResult.data.url;
+        // 发送文件消息
+        this.sendGroupMessage(file.name || '文件', 2, fileUrl);
+    },
+
     receiveGroupMessage(msg) {
+        console.log('[群聊] 收到消息:', msg);
+        console.log('[群聊] messageType:', msg.messageType, 'fileUrl:', msg.fileUrl, 'content:', msg.content);
         if (this.currentGroupId === msg.groupId) {
             this._appendGroupBubble(msg);
             this.scrollToBottom();
@@ -269,5 +369,210 @@ const GroupManager = {
         if (typeof GroupSettingsModal !== 'undefined') {
             GroupSettingsModal.show(this.currentGroupId);
         }
+    },
+
+    /**
+     * 显示图片预览模态框（增强版：支持缩放、拖拽、旋转）
+     */
+    showImagePreview(imageUrl) {
+        let modal = document.getElementById('imagePreviewModal');
+        if (!modal) {
+            // 创建模态框
+            modal = document.createElement('div');
+            modal.id = 'imagePreviewModal';
+            modal.className = 'image-preview-modal';
+            modal.innerHTML = `
+                <div class="image-preview-overlay" onclick="GroupManager.closeImagePreview()"></div>
+                <div class="image-preview-toolbar">
+                    <button class="image-preview-tool" onclick="GroupManager.zoomOut()" title="缩小">
+                        <i data-lucide="minus"></i>
+                    </button>
+                    <span class="image-preview-scale">100%</span>
+                    <button class="image-preview-tool" onclick="GroupManager.zoomIn()" title="放大">
+                        <i data-lucide="plus"></i>
+                    </button>
+                    <button class="image-preview-tool" onclick="GroupManager.rotateLeft()" title="向左旋转">
+                        <i data-lucide="rotate-ccw"></i>
+                    </button>
+                    <button class="image-preview-tool" onclick="GroupManager.rotateRight()" title="向右旋转">
+                        <i data-lucide="rotate-cw"></i>
+                    </button>
+                    <button class="image-preview-tool" onclick="GroupManager.resetImage()" title="重置">
+                        <i data-lucide="refresh-ccw"></i>
+                    </button>
+                    <button class="image-preview-tool" onclick="GroupManager.downloadImage()" title="下载">
+                        <i data-lucide="download"></i>
+                    </button>
+                    <button class="image-preview-tool image-preview-close" onclick="GroupManager.closeImagePreview()" title="关闭">
+                        <i data-lucide="x"></i>
+                    </button>
+                </div>
+                <div class="image-preview-container">
+                    <img src="" alt="预览" class="image-preview-img" draggable="false">
+                </div>
+            `;
+            document.body.appendChild(modal);
+            lucide.createIcons();
+            
+            // 初始化拖拽
+            this.initImageDrag();
+        }
+        
+        const img = modal.querySelector('.image-preview-img');
+        img.src = imageUrl;
+        
+        // 重置状态
+        this.imageState = {
+            scale: 1,
+            rotation: 0,
+            panX: 0,
+            panY: 0,
+            isDragging: false,
+            startX: 0,
+            startY: 0
+        };
+        
+        modal.classList.add('active');
+        document.body.style.overflow = 'hidden';
+        this.updateImageTransform();
+    },
+
+    /**
+     * 关闭图片预览
+     */
+    closeImagePreview() {
+        const modal = document.getElementById('imagePreviewModal');
+        if (modal) {
+            modal.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+    },
+
+    /**
+     * 初始化图片拖拽
+     */
+    initImageDrag() {
+        const modal = document.getElementById('imagePreviewModal');
+        if (!modal) return;
+        
+        const img = modal.querySelector('.image-preview-img');
+        const container = modal.querySelector('.image-preview-container');
+        
+        container.addEventListener('mousedown', (e) => {
+            if (e.target !== img) return;
+            this.imageState.isDragging = true;
+            this.imageState.startX = e.clientX - this.imageState.panX;
+            this.imageState.startY = e.clientY - this.imageState.panY;
+            img.style.cursor = 'grabbing';
+        });
+        
+        document.addEventListener('mousemove', (e) => {
+            if (!this.imageState.isDragging) return;
+            e.preventDefault();
+            this.imageState.panX = e.clientX - this.imageState.startX;
+            this.imageState.panY = e.clientY - this.imageState.startY;
+            this.updateImageTransform();
+        });
+        
+        document.addEventListener('mouseup', () => {
+            if (this.imageState.isDragging) {
+                this.imageState.isDragging = false;
+                img.style.cursor = 'grab';
+            }
+        });
+        
+        // 鼠标滚轮缩放
+        container.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            if (e.deltaY < 0) {
+                this.zoomIn();
+            } else {
+                this.zoomOut();
+            }
+        });
+    },
+
+    /**
+     * 更新图片变换
+     */
+    updateImageTransform() {
+        const modal = document.getElementById('imagePreviewModal');
+        if (!modal) return;
+        
+        const img = modal.querySelector('.image-preview-img');
+        const scaleEl = modal.querySelector('.image-preview-scale');
+        
+        img.style.transform = `translate(${this.imageState.panX}px, ${this.imageState.panY}px) scale(${this.imageState.scale}) rotate(${this.imageState.rotation}deg)`;
+        
+        if (scaleEl) {
+            scaleEl.textContent = Math.round(this.imageState.scale * 100) + '%';
+        }
+    },
+
+    /**
+     * 放大
+     */
+    zoomIn() {
+        if (this.imageState.scale >= 5) return;
+        this.imageState.scale += 0.25;
+        this.updateImageTransform();
+    },
+
+    /**
+     * 缩小
+     */
+    zoomOut() {
+        if (this.imageState.scale <= 0.25) return;
+        this.imageState.scale -= 0.25;
+        this.updateImageTransform();
+    },
+
+    /**
+     * 向左旋转
+     */
+    rotateLeft() {
+        this.imageState.rotation -= 90;
+        this.updateImageTransform();
+    },
+
+    /**
+     * 向右旋转
+     */
+    rotateRight() {
+        this.imageState.rotation += 90;
+        this.updateImageTransform();
+    },
+
+    /**
+     * 重置图片
+     */
+    resetImage() {
+        this.imageState = {
+            scale: 1,
+            rotation: 0,
+            panX: 0,
+            panY: 0,
+            isDragging: false,
+            startX: 0,
+            startY: 0
+        };
+        this.updateImageTransform();
+    },
+
+    /**
+     * 下载图片
+     */
+    downloadImage() {
+        const modal = document.getElementById('imagePreviewModal');
+        if (!modal) return;
+        
+        const img = modal.querySelector('.image-preview-img');
+        const link = document.createElement('a');
+        link.href = img.src;
+        link.download = 'image_' + Date.now() + '.jpg';
+        link.target = '_blank';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     }
 };

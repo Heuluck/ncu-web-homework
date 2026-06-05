@@ -73,6 +73,49 @@
 .chat-header-name{font-size:var(--text-base);font-weight:var(--font-semibold);color:var(--text-main)}
 .chat-header-status{font-size:var(--text-xs);color:var(--slate-500)}
 .chat-header-actions{display:flex;gap:var(--space-1)}
+
+/* 聊天记录弹窗 */
+.chat-history-modal{position:fixed;top:0;left:0;right:0;bottom:0;z-index:10000;display:none;align-items:center;justify-content:center}
+.chat-history-modal.active{display:flex}
+.chat-history-modal-overlay{position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5)}
+.chat-history-modal-content{position:relative;width:90%;max-width:700px;height:80vh;background:var(--bg-app);border-radius:var(--radius-2xl);box-shadow:var(--shadow-lg);display:flex;flex-direction:column;overflow:hidden;z-index:2;animation:modalSlideIn 0.2s ease-out}
+@keyframes modalSlideIn{from{opacity:0;transform:translateY(-20px) scale(0.95)}to{opacity:1;transform:translateY(0) scale(1)}}
+.chat-history-modal-header{display:flex;align-items:center;justify-content:space-between;padding:var(--space-5) var(--space-6);border-bottom:1px solid var(--border-subtle)}
+.chat-history-modal-header h3{font-size:var(--text-lg);font-weight:var(--font-semibold);color:var(--text-main);margin:0}
+.chat-history-modal-body{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.chat-history-search{padding:var(--space-4) var(--space-6);border-bottom:1px solid var(--border-subtle)}
+.chat-history-input{width:100%;height:40px;padding:0 var(--space-4);font-size:var(--text-sm);border:1px solid var(--border-subtle);border-radius:var(--radius-lg);background:var(--bg-surface);transition:all var(--transition-fast);cursor:text}
+.chat-history-input:focus{outline:none;border-color:var(--border-strong);background:var(--bg-app);box-shadow:0 0 0 3px rgba(39,39,42,0.1)}
+.chat-history-input::placeholder{color:var(--slate-400)}
+.chat-history-input[type="date"]{cursor:pointer;color:var(--text-main);position:relative}
+.chat-history-input[type="date"]:focus{cursor:text}
+.chat-history-input[type="date"]:not([value=""]) {
+  color: var(--text-main);
+}
+.chat-history-input[type="date"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 0.6;
+  transition: opacity var(--transition-fast);
+}
+.chat-history-input[type="date"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+}
+.chat-history-filters{display:grid;grid-template-columns:1fr 1fr;gap:var(--space-3);padding:var(--space-4) var(--space-6);border-bottom:1px solid var(--border-subtle)}
+.chat-history-filters .chat-history-input{height:38px}
+.chat-history-actions{display:flex;gap:var(--space-2);padding:var(--space-4) var(--space-6);border-bottom:1px solid var(--border-subtle)}
+.chat-history-export{display:flex;align-items:center;gap:var(--space-2);padding:var(--space-4) var(--space-6);border-bottom:1px solid var(--border-subtle)}
+.chat-history-messages{flex:1;overflow-y:auto;padding:var(--space-4) var(--space-6)}
+.chat-history-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--text-muted);text-align:center}
+.chat-history-empty p{margin-top:var(--space-4);font-size:var(--text-sm)}
+.chat-history-item{display:flex;gap:var(--space-3);padding:var(--space-3) 0;border-bottom:1px solid var(--border-subtle)}
+.chat-history-item:last-child{border-bottom:none}
+.chat-history-avatar{flex-shrink:0}
+.chat-history-content{flex:1;min-width:0}
+.chat-history-text{font-size:var(--text-sm);color:var(--text-main);line-height:1.5;word-break:break-word}
+.chat-history-text.highlight{background-color:rgba(255,255,0,0.3);padding:2px 4px;border-radius:4px}
+.chat-history-meta{display:flex;align-items:center;gap:var(--space-2);margin-top:var(--space-1);font-size:11px;color:var(--slate-400)}
+.chat-history-image{max-width:120px;max-height:100px;border-radius:var(--radius-md);cursor:pointer;margin-top:var(--space-2)}
+.chat-history-time{font-size:11px;color:var(--slate-400);white-space:nowrap}
 .chat-messages{flex:1;overflow-y:auto;padding:var(--space-8) var(--space-10);display:flex;flex-direction:column;gap:var(--space-6);background:var(--bg-chat)}
 .message{display:flex;gap:var(--space-4);max-width:80%}
 .message.self{align-self:flex-end;flex-direction:row-reverse}
@@ -87,7 +130,7 @@
 .date-divider::before,.date-divider::after{content:'';flex:1;border-bottom:1px solid var(--border-subtle)}
 .date-divider span{padding:0 var(--space-4);font-size:11px;font-weight:var(--font-semibold);color:var(--slate-400)}
 .chat-input-area{padding:var(--space-6) var(--space-10);background:var(--bg-app);border-top:1px solid var(--border-subtle)}
-.chat-input-toolbar{display:flex;gap:var(--space-1);margin-bottom:var(--space-2)}
+.chat-input-toolbar{display:flex;gap:var(--space-1);margin-bottom:var(--space-2);position:relative;}
 .chat-input-box{display:flex;align-items:flex-end;gap:var(--space-3);border:1px solid var(--border-strong);border-radius:var(--radius-lg);padding:var(--space-3) var(--space-4);background:var(--bg-app);transition:all var(--transition-fast)}
 .chat-input-box:focus-within{border-color:var(--text-main);box-shadow:0 2px 8px rgba(0,0,0,0.04)}
 .chat-input-field{flex:1;border:none;background:transparent;font-size:var(--text-base);color:var(--text-main);resize:none;min-height:24px;max-height:120px;line-height:1.5}
@@ -134,3 +177,151 @@
 .message-voice{display:inline-flex;align-items:center;gap:var(--space-2)}
 .chat-empty{display:flex;align-items:center;justify-content:center;height:100%}
 .list-item .badge{margin-left:auto;flex-shrink:0}
+
+/* 表情选择器样式 */
+.emoji-picker-container {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  margin-bottom: 8px;
+  z-index: 1000;
+  background: var(--bg-app);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-xl);
+  box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+  padding: var(--space-3);
+  width: 320px;
+  max-height: 320px;
+  overflow-y: auto;
+  display: none;
+}
+
+.emoji-picker-container.active {
+  display: block;
+  animation: emojiSlideUp 0.2s ease-out;
+}
+
+@keyframes emojiSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.emoji-grid{display:grid;grid-template-columns:repeat(8,1fr);gap:var(--space-2)}
+.emoji-item{width:40px;height:40px;display:flex;align-items:center;justify-content:center;border-radius:var(--radius-lg);cursor:pointer;transition:all var(--transition-fast);background:transparent;font-size:24px}
+.emoji-item:hover{background:var(--bg-surface-hover);transform:scale(1.1)}
+.emoji-item:active{transform:scale(0.95)}
+.emoji-empty{padding:var(--space-6);text-align:center;color:var(--text-muted);font-size:var(--text-sm)}
+
+/* 图片预览模态框 */
+.image-preview-modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10001;
+}
+
+.image-preview-modal.active {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.image-preview-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.9);
+}
+
+/* 工具栏 */
+.image-preview-toolbar {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10001;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  background: rgba(0, 0, 0, 0.8);
+  border-radius: var(--radius-full);
+  backdrop-filter: blur(10px);
+}
+
+.image-preview-tool {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-full);
+  color: white;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.image-preview-tool:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.image-preview-tool:active {
+  transform: scale(0.95);
+}
+
+.image-preview-scale {
+  color: white;
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  min-width: 50px;
+  text-align: center;
+  padding: 0 var(--space-2);
+}
+
+.image-preview-close {
+  margin-left: var(--space-2);
+}
+
+/* 图片容器 */
+.image-preview-container {
+  position: relative;
+  z-index: 10000;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  cursor: grab;
+}
+
+.image-preview-container:active {
+  cursor: grabbing;
+}
+
+.image-preview-img {
+  max-width: 90%;
+  max-height: 90vh;
+  object-fit: contain;
+  user-select: none;
+  -webkit-user-drag: none;
+  cursor: grab;
+  transition: transform 0.1s ease-out;
+}
+
+.image-preview-img:active {
+  cursor: grabbing;
+}

@@ -23,6 +23,7 @@ logs/
 
 # Uploads
 backend/uploads/
+uploads/
 
 # Frontend copy (source: frontend/)
 backend/src/main/resources/static/
@@ -36,6 +37,7 @@ application-local.yml
 # Agent config (local)
 .ttadk/
 ai-plugin.json
+.qwen/
 
 # Env
 .env
@@ -47,3 +49,7 @@ ai-plugin.json
 # Local Spring profile (contains personal dev config, e.g. local DB password)
 backend/src/main/resources/application-local.yml
 backend/src/test/resources/application-local.yml
+
+# Test reports
+backend/target/
+**/surefire-reports/

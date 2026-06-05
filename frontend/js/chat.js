@@ -155,9 +155,30 @@ const ChatManager = {
     const escapedContent = Utils.escapeHtml(msg.content);
 
     let contentHtml = '';
-    switch (msg.messageType) {
+    const messageType = msg.messageType || 0;
+    
+    switch (messageType) {
       case 1:
-        contentHtml = `<img src="${msg.fileUrl}" alt="图片" class="message-image" onclick="window.open('${msg.fileUrl}', '_blank')">`;
+        // 图片消息 - 检查是否是 emoji 表情
+        // 先解码 URL 编码的 emoji 字符
+        let fileUrl = msg.fileUrl;
+        if (fileUrl && fileUrl.startsWith('http://localhost:8080/')) {
+          try {
+            fileUrl = decodeURIComponent(fileUrl.replace('http://localhost:8080/', ''));
+          } catch (e) {
+            console.error('解码失败:', e);
+          }
+        }
+        
+        if (fileUrl && fileUrl.length <= 10) {
+          // 是 emoji 表情，直接显示
+          contentHtml = `<span style="font-size: 28px;vertical-align:middle;">${fileUrl}</span>`;
+        } else if (fileUrl) {
+          // 普通图片 - 点击弹出预览
+          contentHtml = `<img src="${msg.fileUrl}" alt="图片" class="message-image" onclick="window.open('${msg.fileUrl}', '_blank')">`;
+        } else {
+          contentHtml = `<div class="message-text">${escapedContent}</div>`;
+        }
         break;
       case 2:
         contentHtml = `<a href="${msg.fileUrl}" target="_blank" class="message-file">📎 ${escapedContent}</a>`;
@@ -196,23 +217,66 @@ const ChatManager = {
     }
   },
 
-  sendMessage() {
-    const input = document.getElementById('messageInput');
-    const content = input.value.trim();
-    if (!content || !this.currentFriendId) return;
+  sendMessage(content, messageType = 0, fileUrl = null) {
+    if (!this.currentFriendId) return;
 
-    const sent = WebSocketManager.sendMessage(this.currentFriendId, content, 0);
+    const sent = WebSocketManager.sendMessage(this.currentFriendId, content, messageType);
     if (!sent) {
       API.post('/api/message/private/send', {
         receiverId: this.currentFriendId,
         content: content,
-        messageType: 0
+        messageType: messageType,
+        fileUrl: fileUrl
       });
     }
+  },
+
+  sendTextMessage() {
+    const input = document.getElementById('messageInput');
+    const content = input.value.trim();
+    if (!content || !this.currentFriendId) return;
+
+    this.sendMessage(content, 0, null);
 
     input.value = '';
     input.style.height = 'auto';
     input.focus();
+  },
+
+  /**
+   * 发送图片消息
+   */
+  async sendImage(file) {
+    if (!this.currentFriendId) return;
+
+    // 上传文件
+    const uploadResult = await API.upload(file);
+    if (!uploadResult || uploadResult.code !== 200) {
+      alert('图片上传失败');
+      return;
+    }
+
+    const fileUrl = uploadResult.data.url;
+    // 发送图片消息，内容为文件名
+    this.sendMessage(file.name || '图片', 1, fileUrl);
+  },
+
+  /**
+   * 发送文件消息
+   */
+  async sendFile(file) {
+    if (!this.currentFriendId) return;
+
+    // 上传文件
+    const uploadResult = await API.upload(file);
+    if (!uploadResult || uploadResult.code !== 200) {
+      alert('文件上传失败');
+      return;
+    }
+
+    const fileUrl = uploadResult.data.url;
+    // 发送文件消息，内容为文件名
+    this.sendMessage(file.name || '文件', 2, fileUrl);
   },
 
   receiveMessage(msg) {

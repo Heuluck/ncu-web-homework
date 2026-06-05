@@ -296,6 +296,10 @@
         <button class="btn-icon" id="groupSettingsBtn" title="群设置" style="display: none;">
           <i data-lucide="settings"></i>
         </button>
+        <!-- 聊天记录按钮 -->
+        <button class="btn-icon" id="chatHistoryBtn" title="聊天记录">
+          <i data-lucide="message-square"></i>
+        </button>
         <button class="btn-icon" title="语音通话">
           <i data-lucide="phone"></i>
         </button>
@@ -318,8 +322,8 @@
 
     <!-- 输入区域 -->
     <div class="chat-input-area" id="chatInputArea" style="display: none;">
-      <div class="chat-input-toolbar">
-        <button class="btn-icon" title="表情">
+      <div class="chat-input-toolbar" style="position: relative;">
+        <button class="btn-icon" title="表情" id="emojiBtn">
           <i data-lucide="smile"></i>
         </button>
         <button class="btn-icon" title="图片">
@@ -331,6 +335,8 @@
         <button class="btn-icon" title="语音">
           <i data-lucide="mic"></i>
         </button>
+        <!-- 表情选择器容器（在工具栏内绝对定位） -->
+        <div id="emojiPicker" class="emoji-picker-container"></div>
       </div>
       <div class="chat-input-box">
         <textarea id="messageInput" class="chat-input-field" placeholder="输入消息..." rows="1"></textarea>
@@ -340,6 +346,57 @@
       </div>
     </div>
   </main>
+</div>
+
+<!-- 聊天记录弹窗（移到最外层，避免被遮挡） -->
+<div class="chat-history-modal" id="chatHistoryModal">
+  <div class="chat-history-modal-overlay" onclick="toggleChatHistoryModal()"></div>
+  <div class="chat-history-modal-content">
+    <div class="chat-history-modal-header">
+      <h3>聊天记录</h3>
+      <button class="btn-icon" onclick="toggleChatHistoryModal()">
+        <i data-lucide="x"></i>
+      </button>
+    </div>
+    <div class="chat-history-modal-body">
+      <div class="chat-history-search">
+        <input type="text" class="chat-history-input" id="historyKeyword" placeholder="搜索聊天记录...">
+      </div>
+      <div class="chat-history-filters">
+        <div style="display:flex;flex-direction:column;gap:4px;">
+          <label style="font-size:12px;color:var(--text-muted);font-weight:500;">开始日期</label>
+          <input type="date" class="chat-history-input" id="historyStartDate">
+        </div>
+        <div style="display:flex;flex-direction:column;gap:4px;">
+          <label style="font-size:12px;color:var(--text-muted);font-weight:500;">结束日期</label>
+          <input type="date" class="chat-history-input" id="historyEndDate">
+        </div>
+      </div>
+      <div class="chat-history-actions">
+        <button class="btn btn-primary btn-sm" onclick="searchChatHistory()">
+          <i data-lucide="search"></i> 搜索
+        </button>
+        <button class="btn btn-ghost btn-sm" onclick="resetChatHistorySearch()">
+          <i data-lucide="refresh-cw"></i> 重置
+        </button>
+      </div>
+      <div class="chat-history-export">
+        <span style="font-size: var(--text-sm); color: var(--text-muted);">导出：</span>
+        <button class="btn btn-secondary btn-sm" onclick="exportChatHistory('txt')">
+          <i data-lucide="file-text"></i> TXT
+        </button>
+        <button class="btn btn-secondary btn-sm" onclick="exportChatHistory('csv')">
+          <i data-lucide="file-spreadsheet"></i> CSV
+        </button>
+      </div>
+      <div class="chat-history-messages" id="chatHistoryMessages">
+        <div class="chat-history-empty">
+          <i data-lucide="message-square" style="width: 48px; height: 48px; color: var(--slate-300);"></i>
+          <p>点击搜索按钮查看聊天记录</p>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- SockJS + STOMP.js CDN -->
@@ -353,6 +410,7 @@
 <script src="js/conversation.js"></script>
 <script src="js/chat.js"></script>
 <script src="js/group.js"></script>
+<script src="js/emoji.js"></script>
 <script src="js/components/create-group-modal.js"></script>
 <script src="js/components/group-member-panel.js"></script>
 <script src="js/components/group-settings-modal.js"></script>
@@ -402,6 +460,64 @@
   WebSocketManager.connect();
   ConversationManager.loadConversations();
 
+  // ===== 初始化表情选择器 =====
+  EmojiPicker.init();
+
+  // ===== 表情按钮事件 =====
+  const emojiBtn = document.getElementById('emojiBtn');
+  const emojiPickerContainer = document.getElementById('emojiPicker');
+
+  if (emojiBtn && emojiPickerContainer) {
+    emojiBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      EmojiPicker.show('emojiPicker', (emojiName, emojiChar) => {
+        console.log('[表情] 选择表情:', emojiName, emojiChar);
+        
+        // 构建请求体
+        const body = {
+          content: emojiName,
+          messageType: 1,
+          fileUrl: emojiChar
+        };
+        
+        // 判断是群聊还是私聊
+        let url = '';
+        if (GroupManager.currentGroupId) {
+          url = `/api/group/message/send`;
+          body.groupId = GroupManager.currentGroupId;
+        } else if (ChatManager.currentFriendId) {
+          url = `/api/message/private/send`;
+          body.receiverId = ChatManager.currentFriendId;
+        }
+        
+        if (!url) {
+          Utils.showToast('请先选择一个聊天对象', 'warning');
+          return;
+        }
+        
+        // 使用 fetch 直接发送，避免 JSON.stringify 转义 emoji
+        const token = Auth.getToken();
+        fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(body)
+        }).then(res => res.json())
+          .then(data => {
+            console.log('[表情] 发送结果:', data);
+          })
+          .catch(err => {
+            console.error('[表情] 发送失败:', err);
+          });
+        
+        // 关闭表情选择器
+        emojiPickerContainer.classList.remove('active');
+      });
+    });
+  }
+
   // ===== 标签页切换 =====
   document.querySelectorAll('.nav-item').forEach(tab => {
     tab.addEventListener('click', () => {
@@ -443,16 +559,34 @@
     }
   });
 
+  // ===== 聊天记录侧边栏 =====
+  document.getElementById('chatHistoryBtn')?.addEventListener('click', () => {
+    toggleChatHistoryModal();
+  });
+
   // ===== 消息输入 =====
   const messageInput = document.getElementById('messageInput');
   const sendBtn = document.getElementById('sendBtn');
+
+  // 监听输入，将表情标记渲染为图片预览
+  let lastValue = '';
+  messageInput.addEventListener('input', () => {
+    const value = messageInput.value;
+    // 检查是否包含表情标记
+    if (value.includes('[emoji:') && value !== lastValue) {
+      // 将表情标记替换为图片显示（仅视觉，实际值不变）
+      const displayValue = value.replace(/\[emoji:([^\]]+):([^\]]+)\]/g, '🖼️$1');
+      console.log('[表情] 输入内容:', value);
+    }
+    lastValue = value;
+  });
 
   // 修改发送逻辑：支持群聊和私聊
   function handleSendMessage() {
     if (GroupManager.currentGroupId) {
       GroupManager.sendGroupMessage();
     } else if (ChatManager.currentFriendId) {
-      ChatManager.sendMessage();
+      ChatManager.sendTextMessage();
     }
   }
 
@@ -466,6 +600,60 @@
   sendBtn.addEventListener('click', () => {
     handleSendMessage();
   });
+
+  // ===== 图片和文件上传 =====
+  // 图片上传按钮
+  const imageUploadBtn = document.querySelector('button[title="图片"]');
+  if (imageUploadBtn) {
+    imageUploadBtn.addEventListener('click', () => {
+      const fileInput = document.createElement('input');
+      fileInput.type = 'file';
+      fileInput.accept = 'image/*';
+      fileInput.style.display = 'none';
+      fileInput.addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        // 判断当前是私聊还是群聊
+        if (ChatManager.currentFriendId) {
+          await ChatManager.sendImage(file);
+        } else if (GroupManager.currentGroupId) {
+          await GroupManager.sendGroupImage(file);
+        } else {
+          Utils.showToast('请先选择一个聊天对象', 'warning');
+        }
+      });
+      document.body.appendChild(fileInput);
+      fileInput.click();
+      document.body.removeChild(fileInput);
+    });
+  }
+
+  // 文件上传按钮
+  const fileUploadBtn = document.querySelector('button[title="文件"]');
+  if (fileUploadBtn) {
+    fileUploadBtn.addEventListener('click', () => {
+      const fileInput = document.createElement('input');
+      fileInput.type = 'file';
+      fileInput.style.display = 'none';
+      fileInput.addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        // 判断当前是私聊还是群聊
+        if (ChatManager.currentFriendId) {
+          await ChatManager.sendFile(file);
+        } else if (GroupManager.currentGroupId) {
+          await GroupManager.sendGroupFile(file);
+        } else {
+          Utils.showToast('请先选择一个聊天对象', 'warning');
+        }
+      });
+      document.body.appendChild(fileInput);
+      fileInput.click();
+      document.body.removeChild(fileInput);
+    });
+  }
 
   messageInput.addEventListener('input', () => {
     messageInput.style.height = 'auto';
@@ -497,6 +685,272 @@
 
   // 初始化 lucide 图标
   setTimeout(() => lucide.createIcons(), 100);
+
+  // 当前搜索状态
+  let currentSearchState = {
+    keyword: '',
+    startDate: '',
+    endDate: '',
+    messages: []
+  };
+
+  // ===== 聊天记录侧边栏功能 =====
+  function toggleChatHistoryModal() {
+    const modal = document.getElementById('chatHistoryModal');
+    const isActive = modal.classList.contains('active');
+    if (isActive) {
+      modal.classList.remove('active');
+    } else {
+      modal.classList.add('active');
+      setTimeout(() => {
+        lucide.createIcons();
+        loadAllChatHistory();
+      }, 100);
+    }
+  }
+
+  // 加载所有聊天记录（按时间倒序）
+  function loadAllChatHistory() {
+    const container = document.getElementById('chatHistoryMessages');
+    container.innerHTML = '<div class="chat-history-empty"><p>加载中...</p></div>';
+    
+    let url = '';
+    if (GroupManager.currentGroupId) {
+      url = `/api/message/filter/group?groupId=${GroupManager.currentGroupId}`;
+    } else if (ChatManager.currentFriendId) {
+      url = `/api/message/filter/private?targetId=${ChatManager.currentFriendId}`;
+    }
+    
+    if (!url) {
+      container.innerHTML = '<div class="chat-history-empty"><p>请先选择一个聊天对象</p></div>';
+      lucide.createIcons();
+      return;
+    }
+    
+    API.get(url).then(result => {
+      if (result && result.code === 200) {
+        const messages = (result.data || []).reverse();
+        currentSearchState.messages = messages;
+        currentSearchState.keyword = '';
+        currentSearchState.startDate = '';
+        currentSearchState.endDate = '';
+        renderChatHistory(messages, '');
+      } else {
+        container.innerHTML = '<div class="chat-history-empty"><p>暂无聊天记录</p></div>';
+        lucide.createIcons();
+      }
+    }).catch(err => {
+      console.error('[加载] 错误:', err);
+      container.innerHTML = '<div class="chat-history-empty"><p>加载失败</p></div>';
+      lucide.createIcons();
+    });
+  }
+
+  function searchChatHistory() {
+    const keyword = document.getElementById('historyKeyword').value.trim();
+    const startDate = document.getElementById('historyStartDate').value;
+    const endDate = document.getElementById('historyEndDate').value;
+    
+    if (!keyword && !startDate && !endDate) {
+      loadAllChatHistory();
+      return;
+    }
+    
+    const container = document.getElementById('chatHistoryMessages');
+    container.innerHTML = '<div class="chat-history-empty"><p>搜索中...</p></div>';
+    
+    let url = '';
+    if (GroupManager.currentGroupId) {
+      if (keyword) {
+        url = `/api/message/search/group?groupId=${GroupManager.currentGroupId}&keyword=${encodeURIComponent(keyword)}`;
+      } else if (startDate || endDate) {
+        url = `/api/message/filter/group?groupId=${GroupManager.currentGroupId}`;
+        if (startDate) url += `&startTime=${startDate} 00:00:00`;
+        if (endDate) url += `&endTime=${endDate} 23:59:59`;
+      }
+    } else if (ChatManager.currentFriendId) {
+      if (keyword) {
+        url = `/api/message/search/private?targetId=${ChatManager.currentFriendId}&keyword=${encodeURIComponent(keyword)}`;
+      } else if (startDate || endDate) {
+        url = `/api/message/filter/private?targetId=${ChatManager.currentFriendId}`;
+        if (startDate) url += `&startTime=${startDate} 00:00:00`;
+        if (endDate) url += `&endTime=${endDate} 23:59:59`;
+      }
+    }
+    
+    if (!url) {
+      container.innerHTML = '<div class="chat-history-empty"><p>请先选择一个聊天对象</p></div>';
+      lucide.createIcons();
+      return;
+    }
+    
+    API.get(url).then(result => {
+      if (result && result.code === 200) {
+        const messages = (result.data || []).reverse();
+        currentSearchState.messages = messages;
+        currentSearchState.keyword = keyword;
+        currentSearchState.startDate = startDate;
+        currentSearchState.endDate = endDate;
+        renderChatHistory(messages, keyword);
+      } else {
+        container.innerHTML = '<div class="chat-history-empty"><p>搜索失败</p></div>';
+        lucide.createIcons();
+      }
+    }).catch(err => {
+      console.error('[搜索] 错误:', err);
+      container.innerHTML = '<div class="chat-history-empty"><p>搜索出错，请稍后重试</p></div>';
+      lucide.createIcons();
+    });
+  }
+
+  function resetChatHistorySearch() {
+    document.getElementById('historyKeyword').value = '';
+    document.getElementById('historyStartDate').value = '';
+    document.getElementById('historyEndDate').value = '';
+    // 重置后自动加载所有聊天记录
+    loadAllChatHistory();
+  }
+
+  function renderChatHistory(messages, keyword = '') {
+    const container = document.getElementById('chatHistoryMessages');
+    
+    if (!messages || messages.length === 0) {
+      container.innerHTML = '<div class="chat-history-empty"><p>暂无聊天记录</p></div>';
+      lucide.createIcons();
+      return;
+    }
+    
+    let html = '';
+    messages.forEach(msg => {
+      const avatarSrc = Utils.getAvatarUrl(msg.senderAvatar, `user-${msg.senderId}`);
+      const time = Utils.formatMessageTime(msg.createTime);
+      let contentHtml = '';
+      
+      if (msg.messageType === 1) {
+        // 先解码 URL 编码的 emoji 字符
+        let fileUrl = msg.fileUrl;
+        if (fileUrl && fileUrl.startsWith('http://localhost:8080/')) {
+          try {
+            fileUrl = decodeURIComponent(fileUrl.replace('http://localhost:8080/', ''));
+          } catch (e) {
+            console.error('解码失败:', e);
+          }
+        }
+        
+        if (fileUrl && fileUrl.length <= 10) {
+          contentHtml = `<span style="font-size: 28px;vertical-align:middle;">${fileUrl}</span>`;
+        } else if (fileUrl) {
+          contentHtml = `<img src="${msg.fileUrl}" alt="图片" class="chat-history-image" onclick="showChatImagePreview('${msg.fileUrl}')">`;
+        } else {
+          contentHtml = `<span class="chat-history-text">${Utils.escapeHtml(msg.content)}</span>`;
+        }
+      } else {
+        contentHtml = `<span class="chat-history-text">${Utils.escapeHtml(msg.content)}</span>`;
+      }
+      
+      // 关键词高亮
+      if (keyword && msg.messageType === 0) {
+        contentHtml = contentHtml.replace(new RegExp(keyword, 'gi'), match => `<span class="chat-history-text highlight">${match}</span>`);
+      }
+      
+      html += `
+        <div class="chat-history-item">
+          <img src="${avatarSrc}" alt="头像" class="avatar avatar-sm chat-history-avatar">
+          <div class="chat-history-content">
+            ${contentHtml}
+            <div class="chat-history-meta">
+              <span>${Utils.escapeHtml(msg.senderNickname)}</span>
+              <span class="chat-history-time">${time}</span>
+            </div>
+          </div>
+        </div>
+      `;
+    });
+    
+    container.innerHTML = html;
+    lucide.createIcons();
+  }
+
+  // 显示图片预览（用于聊天记录窗口）
+  function showChatImagePreview(imageUrl) {
+    GroupManager.showImagePreview(imageUrl);
+  }
+
+  function exportChatHistory(format) {
+    // 检查是否有搜索结果
+    if (!currentSearchState.messages || currentSearchState.messages.length === 0) {
+      Utils.showToast('暂无可导出的聊天记录', 'warning');
+      return;
+    }
+    
+    // 生成文件名
+    const now = new Date();
+    const timestamp = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}_${String(now.getHours()).padStart(2,'0')}${String(now.getMinutes()).padStart(2,'0')}`;
+    const filename = `chat_history_${timestamp}.${format}`;
+    
+    // 构建导出内容
+    let content = '';
+    if (format === 'txt') {
+      content = buildTxtContent(currentSearchState.messages);
+    } else if (format === 'csv') {
+      content = buildCsvContent(currentSearchState.messages);
+    }
+    
+    // 创建下载
+    downloadFile(content, filename, format === 'csv' ? 'text/csv' : 'text/plain');
+  }
+
+  // 构建 TXT 格式内容
+  function buildTxtContent(messages) {
+    let sb = '聊天记录导出\n';
+    sb += `导出时间：${new Date().toLocaleString('zh-CN')}\n`;
+    sb += '========================================\n\n';
+    
+    messages.forEach(msg => {
+      const time = new Date(msg.createTime).toLocaleString('zh-CN');
+      const sender = msg.senderNickname || '未知用户';
+      const content = msg.content;
+      sb += `[${time}] ${sender}: ${content}\n`;
+    });
+    
+    return sb;
+  }
+
+  // 构建 CSV 格式内容
+  function buildCsvContent(messages) {
+    let csv = '时间，发送者，内容，类型\n';
+    
+    messages.forEach(msg => {
+      const time = new Date(msg.createTime).toLocaleString('zh-CN');
+      const sender = msg.senderNickname || '未知用户';
+      let content = msg.content || '';
+      const type = msg.messageType === 1 ? '图片' : (msg.messageType === 2 ? '文件' : '文字');
+      
+      // CSV 转义：如果包含逗号、双引号或换行符，用双引号包裹
+      if (content.includes(',') || content.includes('"') || content.includes('\n')) {
+        content = '"' + content.replace(/"/g, '""') + '"';
+      }
+      
+      csv += `${time},${sender},${content},${type}\n`;
+    });
+    
+    return csv;
+  }
+
+  // 下载文件
+  function downloadFile(content, filename, mimeType) {
+    // 添加 UTF-8 BOM 头，防止中文乱码
+    const bom = new Uint8Array([0xEF, 0xBB, 0xBF]);
+    const blob = new Blob([bom, content], { type: mimeType + ';charset=utf-8' });
+    
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(link.href);
+  }
 </script>
 </body>
 </html>

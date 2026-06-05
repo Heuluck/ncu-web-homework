@@ -285,6 +285,8 @@ public class GroupServiceImpl implements GroupService {
         GroupMember member = getMember(dto.getGroupId(), userId);
         if (member == null) throw new RuntimeException("你不是群成员");
 
+        System.out.println("[DEBUG] 发送群消息：groupId=" + dto.getGroupId() + ", content=" + dto.getContent() + ", messageType=" + dto.getMessageType() + ", fileUrl=" + dto.getFileUrl());
+
         GroupMessage msg = new GroupMessage();
         msg.setGroupId(dto.getGroupId());
         msg.setSenderId(userId);
@@ -294,6 +296,8 @@ public class GroupServiceImpl implements GroupService {
         msg.setIsRecall(0);
         groupMessageMapper.insert(msg);
 
+        System.out.println("[DEBUG] 消息已保存：id=" + msg.getId() + ", fileUrl=" + msg.getFileUrl());
+
         User sender = userMapper.selectById(userId);
         GroupMessageVO vo = new GroupMessageVO();
         vo.setId(msg.getId());
@@ -302,6 +306,7 @@ public class GroupServiceImpl implements GroupService {
         vo.setSenderNickname(sender != null ? sender.getNickname() : "");
         vo.setContent(msg.getContent());
         vo.setMessageType(msg.getMessageType());
+        vo.setFileUrl(msg.getFileUrl());
         vo.setCreateTime(msg.getCreateTime());
         vo.setIsSelf(true);
 

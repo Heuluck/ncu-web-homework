@@ -3,6 +3,7 @@ package com.ncu.chat.service;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.ncu.chat.common.PageResult;
+import com.ncu.chat.mapper.FriendshipMapper;
 import com.ncu.chat.mapper.PrivateMessageMapper;
 import com.ncu.chat.mapper.UserMapper;
 import com.ncu.chat.model.dto.PrivateMessageSendDTO;
@@ -41,6 +42,9 @@ class PrivateMessageServiceTest {
 
     @Mock
     private UserMapper userMapper;
+
+    @Mock
+    private FriendshipMapper friendshipMapper;
 
     @InjectMocks
     private PrivateMessageServiceImpl privateMessageService;

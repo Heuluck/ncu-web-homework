@@ -9,7 +9,7 @@ const ChatManager = {
   hasMore: true,
   loading: false,
 
-  async openChat(friendId) {
+  async openChat(friendId, fallbackInfo) {
     if (this.currentFriendId === friendId) return;
 
     this.currentFriendId = friendId;
@@ -17,9 +17,10 @@ const ChatManager = {
     this.hasMore = true;
 
     const conv = ConversationManager.conversations.find(c => c.friendId === friendId);
-    this.currentFriendInfo = conv || { friendId, nickname: '加载中...', avatar: null, onlineStatus: 0 };
+    this.currentFriendInfo = conv || (fallbackInfo || { friendId, nickname: '加载中...', avatar: null, onlineStatus: 0 });
 
     this._renderHeader();
+    this._updateInputState();
     document.getElementById('chatInputArea').style.display = '';
 
     const messagesEl = document.getElementById('chatMessages');
@@ -34,14 +35,41 @@ const ChatManager = {
     const info = this.currentFriendInfo;
     if (!info) return;
 
+    // 如果 blockStatus 未设置，尝试从 FriendManager 查找
+    if (!info.blockStatus && typeof FriendManager !== 'undefined' && FriendManager.groups) {
+      for (const group of FriendManager.groups) {
+        const f = (group.friends || []).find(x => x.friendId === info.friendId);
+        if (f && f.blockStatus) { info.blockStatus = f.blockStatus; break; }
+      }
+    }
+
     document.getElementById('chatHeader').style.display = '';
     document.getElementById('chatAvatar').src = Utils.getAvatarUrl(info.avatar, `user-${info.friendId}`);
     document.getElementById('chatAvatar').alt = info.nickname;
-    document.getElementById('chatName').textContent = info.nickname;
+
+    let nameHtml = Utils.escapeHtml(info.nickname || '');
+    if (info.blockStatus === 'blocked_by_me') nameHtml += ' <span style="color:var(--color-danger);font-size:12px;">(已拉黑)</span>';
+    else if (info.blockStatus === 'blocked_by_them') nameHtml += ' <span style="color:var(--color-warning);font-size:12px;">(被拉黑)</span>';
+    else if (info.blockStatus === 'both') nameHtml += ' <span style="color:var(--color-danger);font-size:12px;">(互相拉黑)</span>';
+    document.getElementById('chatName').innerHTML = nameHtml;
 
     const statusEl = document.getElementById('chatStatus');
     statusEl.className = `status-indicator ${Utils.getStatusClass(info.onlineStatus)}`;
     document.getElementById('chatStatusText').textContent = Utils.getStatusText(info.onlineStatus);
+  },
+
+  _updateInputState() {
+    const info = this.currentFriendInfo;
+    const blocked = info && info.blockStatus && info.blockStatus !== 'none';
+    const input = document.getElementById('messageInput');
+    const sendBtn = document.getElementById('sendBtn');
+    if (input) {
+      input.disabled = blocked;
+      input.placeholder = blocked ? '无法发送消息（拉黑限制）' : '输入消息...';
+    }
+    if (sendBtn) {
+      sendBtn.disabled = blocked;
+    }
   },
 
   updateHeaderStatus(status) {
@@ -217,17 +245,27 @@ const ChatManager = {
     }
   },
 
-  sendMessage(content, messageType = 0, fileUrl = null) {
+  async sendMessage(content, messageType = 0, fileUrl = null) {
     if (!this.currentFriendId) return;
+
+    // 拉黑状态检查
+    if (this.currentFriendInfo && this.currentFriendInfo.blockStatus && this.currentFriendInfo.blockStatus !== 'none') {
+      Utils.showToast('由于拉黑限制，无法发送消息', 'error');
+      return;
+    }
 
     const sent = WebSocketManager.sendMessage(this.currentFriendId, content, messageType);
     if (!sent) {
-      API.post('/api/message/private/send', {
+      const res = await API.post('/api/message/private/send', {
         receiverId: this.currentFriendId,
         content: content,
         messageType: messageType,
         fileUrl: fileUrl
       });
+      if (res && res.code !== 200) {
+        Utils.showToast(res?.message || '发送失败', 'error');
+        return;
+      }
     }
   },
 
@@ -325,6 +363,76 @@ const ChatManager = {
     requestAnimationFrame(() => {
       messagesEl.scrollTop = messagesEl.scrollHeight;
     });
+  },
+
+  showChatMenu(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    this._closeChatMenu();
+
+    // 群聊模式不显示好友菜单
+    if (GroupManager.currentGroupId) return;
+
+    const friendId = this.currentFriendId;
+    if (!friendId) return;
+
+    // 从 FriendManager 查找 friendshipId 和 blockStatus
+    let friendshipId = null;
+    let blockStatus = 'none';
+    if (typeof FriendManager !== 'undefined' && FriendManager.groups) {
+      for (const group of FriendManager.groups) {
+        const f = (group.friends || []).find(x => x.friendId === friendId);
+        if (f) {
+          friendshipId = f.friendshipId;
+          blockStatus = f.blockStatus || 'none';
+          break;
+        }
+      }
+    }
+
+    const canUnblock = blockStatus === 'blocked_by_me' || blockStatus === 'both';
+    const canBlock = blockStatus === 'none' || blockStatus === 'blocked_by_them';
+
+    const menu = document.createElement('div');
+    menu.id = 'chatMoreMenu';
+    menu.className = 'context-menu';
+    menu.style.cssText = `position:fixed;left:${event.clientX - 180}px;top:${event.clientY + 8}px;z-index:2000;`;
+
+    let items = `<div class="context-menu-item" onclick="FriendManager.currentContextFriendId=${friendId};FriendManager._ctxViewProfile();FriendManager._closeContextMenu();ChatManager._closeChatMenu();">
+          <i data-lucide="user" style="width:16px;height:16px;"></i> 查看资料
+        </div>`;
+    if (!friendshipId) {
+      items += `<div class="context-divider"></div>
+        <div class="context-menu-item" style="color:var(--text-muted);cursor:default;">还不是好友</div>`;
+    } else {
+      if (canUnblock) {
+        items += `<div class="context-divider"></div>
+          <div class="context-menu-item" onclick="FriendManager.currentContextFriendshipId=${friendshipId};FriendManager._ctxUnblock();ChatManager._closeChatMenu();" style="color:var(--color-primary);">取消拉黑</div>`;
+      }
+      if (canBlock) {
+        items += `<div class="context-divider"></div>
+          <div class="context-menu-item" onclick="FriendManager.currentContextFriendshipId=${friendshipId};FriendManager._ctxBlock();ChatManager._closeChatMenu();" style="color:var(--color-danger);">拉黑</div>`;
+      }
+      items += `<div class="context-menu-item" onclick="FriendManager.currentContextFriendshipId=${friendshipId};FriendManager._ctxDelete();ChatManager._closeChatMenu();" style="color:var(--color-danger);">删除好友</div>`;
+    }
+
+    menu.innerHTML = `<div style="background:var(--bg-app);border:1px solid var(--border-subtle);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);min-width:170px;padding:4px 0;">${items}</div>`;
+
+    document.body.appendChild(menu);
+    lucide.createIcons();
+
+    // 调整位置防止溢出
+    const rect = menu.getBoundingClientRect();
+    if (rect.right > window.innerWidth) menu.style.left = (window.innerWidth - rect.width - 8) + 'px';
+    if (rect.bottom > window.innerHeight) menu.style.top = (window.innerHeight - rect.height - 8) + 'px';
+
+    setTimeout(() => {
+      document.addEventListener('click', this._closeChatMenu, { once: true });
+    }, 0);
+  },
+
+  _closeChatMenu() {
+    document.getElementById('chatMoreMenu')?.remove();
   },
 
 };

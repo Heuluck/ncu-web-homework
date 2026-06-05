@@ -1,11 +1,12 @@
 package com.ncu.chat.websocket;
 
+import com.ncu.chat.mapper.FriendshipMapper;
 import com.ncu.chat.mapper.PrivateMessageMapper;
 import com.ncu.chat.mapper.UserMapper;
+import com.ncu.chat.model.entity.Friendship;
 import com.ncu.chat.model.entity.PrivateMessage;
 import com.ncu.chat.model.entity.User;
 import com.ncu.chat.model.vo.PrivateMessageVO;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -18,12 +19,22 @@ import java.util.Map;
 
 @Slf4j
 @Controller
-@RequiredArgsConstructor
 public class ChatController {
 
     private final SimpMessagingTemplate messagingTemplate;
     private final PrivateMessageMapper privateMessageMapper;
     private final UserMapper userMapper;
+    private final FriendshipMapper friendshipMapper;
+
+    public ChatController(SimpMessagingTemplate messagingTemplate,
+                          PrivateMessageMapper privateMessageMapper,
+                          UserMapper userMapper,
+                          FriendshipMapper friendshipMapper) {
+        this.messagingTemplate = messagingTemplate;
+        this.privateMessageMapper = privateMessageMapper;
+        this.userMapper = userMapper;
+        this.friendshipMapper = friendshipMapper;
+    }
 
     /**
      * 处理客户端发送的私聊消息
@@ -33,6 +44,26 @@ public class ChatController {
     public void sendPrivateMessage(ChatMessage message, Principal principal) {
         // 从 WebSocket session 中获取发送者 userId
         Long senderId = Long.valueOf(principal.getName());
+
+        // 检查好友关系及拉黑状态
+        Friendship friendship = friendshipMapper.findByUserPair(senderId, message.getTo());
+        if (friendship == null || friendship.getStatus() != 1) {
+            log.warn("消息发送被拒绝: sender={} receiver={} status={}", senderId, message.getTo(),
+                    friendship != null ? friendship.getStatus() : "null");
+            return;
+        }
+        boolean blocked;
+        if (friendship.getRequesterId().equals(senderId)) {
+            blocked = (friendship.getRequesterBlocked() != null && friendship.getRequesterBlocked() == 1)
+                   || (friendship.getReceiverBlocked() != null && friendship.getReceiverBlocked() == 1);
+        } else {
+            blocked = (friendship.getReceiverBlocked() != null && friendship.getReceiverBlocked() == 1)
+                   || (friendship.getRequesterBlocked() != null && friendship.getRequesterBlocked() == 1);
+        }
+        if (blocked) {
+            log.warn("消息被拉黑拦截: sender={} receiver={}", senderId, message.getTo());
+            return;
+        }
 
         // 持久化消息
         PrivateMessage pm = new PrivateMessage();

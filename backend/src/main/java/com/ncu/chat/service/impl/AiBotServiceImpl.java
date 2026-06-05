@@ -214,12 +214,14 @@ public class AiBotServiceImpl implements AiBotService {
 
             for (AiBot bot : bots) {
                 boolean shouldTrigger = false;
+                boolean isAtTrigger = false;
                 String userMessage = content;
 
                 // @触发优先检查：无论 triggerType 如何，只要消息 @了该机器人就触发
                 String atPrefix = "@" + bot.getName();
                 if (content.contains(atPrefix)) {
                     shouldTrigger = true;
+                    isAtTrigger = true;
                     int atIdx = content.indexOf(atPrefix);
                     userMessage = content.substring(atIdx + atPrefix.length()).trim();
                     if (userMessage.isEmpty()) userMessage = "你好";
@@ -244,7 +246,9 @@ public class AiBotServiceImpl implements AiBotService {
                 if (shouldTrigger) {
                     // 限流检查
                     if (!checkRateLimit(groupId, bot.getId())) {
-                        sendBotMessage(groupId, bot, "⚠️ AI 机器人暂时繁忙，请稍后再试。");
+                        if (isAtTrigger) {
+                            sendBotMessage(groupId, bot, "⚠️ AI 机器人暂时繁忙，请稍后再试。");
+                        }
                         continue;
                     }
                     callAiAndReply(groupId, bot, userMessage, senderName);

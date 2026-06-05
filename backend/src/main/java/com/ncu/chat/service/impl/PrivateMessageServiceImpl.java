@@ -3,15 +3,16 @@ package com.ncu.chat.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.ncu.chat.common.PageResult;
+import com.ncu.chat.mapper.FriendshipMapper;
 import com.ncu.chat.mapper.PrivateMessageMapper;
 import com.ncu.chat.mapper.UserMapper;
 import com.ncu.chat.model.dto.PrivateMessageSendDTO;
+import com.ncu.chat.model.entity.Friendship;
 import com.ncu.chat.model.entity.PrivateMessage;
 import com.ncu.chat.model.entity.User;
 import com.ncu.chat.model.vo.ConversationVO;
 import com.ncu.chat.model.vo.PrivateMessageVO;
 import com.ncu.chat.service.PrivateMessageService;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,15 +20,41 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
-@RequiredArgsConstructor
 public class PrivateMessageServiceImpl implements PrivateMessageService {
 
     private final PrivateMessageMapper privateMessageMapper;
     private final UserMapper userMapper;
+    private final FriendshipMapper friendshipMapper;
+
+    public PrivateMessageServiceImpl(PrivateMessageMapper privateMessageMapper,
+                                     UserMapper userMapper,
+                                     FriendshipMapper friendshipMapper) {
+        this.privateMessageMapper = privateMessageMapper;
+        this.userMapper = userMapper;
+        this.friendshipMapper = friendshipMapper;
+    }
 
     @Override
     @Transactional
     public PrivateMessageVO sendMessage(Long senderId, PrivateMessageSendDTO dto) {
+        // 检查好友关系及拉黑状态
+        Friendship friendship = friendshipMapper.findByUserPair(senderId, dto.getReceiverId());
+        if (friendship == null || friendship.getStatus() != 1) {
+            throw new RuntimeException("你们还不是好友，无法发送消息");
+        }
+        // 双向拉黑检查
+        boolean blocked;
+        if (friendship.getRequesterId().equals(senderId)) {
+            blocked = (friendship.getRequesterBlocked() != null && friendship.getRequesterBlocked() == 1)
+                   || (friendship.getReceiverBlocked() != null && friendship.getReceiverBlocked() == 1);
+        } else {
+            blocked = (friendship.getReceiverBlocked() != null && friendship.getReceiverBlocked() == 1)
+                   || (friendship.getRequesterBlocked() != null && friendship.getRequesterBlocked() == 1);
+        }
+        if (blocked) {
+            throw new RuntimeException("由于拉黑限制，无法发送消息");
+        }
+
         // 持久化消息
         PrivateMessage pm = new PrivateMessage();
         pm.setSenderId(senderId);

@@ -1,6 +1,7 @@
 package com.ncu.chat.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.ncu.chat.mapper.FriendGroupMapper;
 import com.ncu.chat.mapper.UserMapper;
 import com.ncu.chat.model.dto.UserLoginDTO;
 import com.ncu.chat.model.dto.UserProfileDTO;
@@ -30,6 +31,9 @@ class UserServiceTest {
 
     @Mock
     private JwtUtil jwtUtil;
+
+    @Mock
+    private FriendGroupMapper friendGroupMapper;
 
     @InjectMocks
     private UserServiceImpl userService;
@@ -61,6 +65,7 @@ class UserServiceTest {
 
         when(userMapper.selectCount(any())).thenReturn(0L);
         when(userMapper.insert(any(User.class))).thenReturn(1);
+        when(friendGroupMapper.insert(any())).thenReturn(1);
         when(jwtUtil.generateToken(any(), any())).thenReturn("test-token");
 
         var result = userService.register(dto);

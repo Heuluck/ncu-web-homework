@@ -85,6 +85,16 @@ const WebSocketManager = {
         console.error('[WS] 群消息解析失败:', e);
       }
     });
+
+    // 好友拉黑/解除状态变更通知
+    this.stompClient.subscribe('/user/queue/friend-status', (message) => {
+      try {
+        const data = JSON.parse(message.body);
+        if (data.type === 'BLOCK_STATUS_CHANGE' && typeof FriendManager !== 'undefined') {
+          FriendManager.onBlockStatusChange(data);
+        }
+      } catch (e) { console.error('[WS] 好友状态解析失败:', e); }
+    });
   },
 
   sendMessage(to, content, messageType = 0, fileUrl = null) {

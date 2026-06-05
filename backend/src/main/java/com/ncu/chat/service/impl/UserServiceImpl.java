@@ -1,14 +1,15 @@
 package com.ncu.chat.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.ncu.chat.mapper.FriendGroupMapper;
 import com.ncu.chat.mapper.UserMapper;
 import com.ncu.chat.model.dto.UserLoginDTO;
 import com.ncu.chat.model.dto.UserProfileDTO;
 import com.ncu.chat.model.dto.UserRegisterDTO;
+import com.ncu.chat.model.entity.FriendGroup;
 import com.ncu.chat.model.entity.User;
 import com.ncu.chat.service.UserService;
 import com.ncu.chat.util.JwtUtil;
-import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -18,12 +19,18 @@ import java.util.HashMap;
 import java.util.Map;
 
 @Service
-@RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
 
     private final UserMapper userMapper;
     private final JwtUtil jwtUtil;
+    private final FriendGroupMapper friendGroupMapper;
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+
+    public UserServiceImpl(UserMapper userMapper, JwtUtil jwtUtil, FriendGroupMapper friendGroupMapper) {
+        this.userMapper = userMapper;
+        this.jwtUtil = jwtUtil;
+        this.friendGroupMapper = friendGroupMapper;
+    }
 
     @Override
     public Map<String, Object> register(UserRegisterDTO dto) {
@@ -47,6 +54,14 @@ public class UserServiceImpl implements UserService {
         user.setEnabled(1);
         user.setDeleted(0);
         userMapper.insert(user);
+
+        // 自动创建默认好友分组
+        FriendGroup defaultGroup = new FriendGroup();
+        defaultGroup.setUserId(user.getId());
+        defaultGroup.setName("我的好友");
+        defaultGroup.setSortOrder(0);
+        defaultGroup.setIsDefault(1);
+        friendGroupMapper.insert(defaultGroup);
 
         String token = jwtUtil.generateToken(user.getId(), user.getUsername());
         Map<String, Object> result = new HashMap<>();

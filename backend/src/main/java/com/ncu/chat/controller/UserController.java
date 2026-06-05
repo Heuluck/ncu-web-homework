@@ -3,9 +3,11 @@ package com.ncu.chat.controller;
 import com.ncu.chat.common.Result;
 import com.ncu.chat.model.dto.ChangePasswordDTO;
 import com.ncu.chat.model.dto.UserProfileDTO;
+import com.ncu.chat.model.entity.User;
 import com.ncu.chat.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.BeanUtils;
 import org.springframework.web.bind.annotation.*;
 import java.util.Map;
 
@@ -39,5 +41,16 @@ public class UserController {
                                   @RequestBody Map<String, Integer> params) {
         userService.updateStatus(userId, params.get("status"));
         return Result.success("状态更新成功", null);
+    }
+
+    @GetMapping("/info/{userId}")
+    public Result<UserProfileDTO> getUserInfo(@PathVariable Long userId) {
+        User user = userService.getUserById(userId);
+        if (user == null || user.getEnabled() == 0) {
+            return Result.error(404, "用户不存在");
+        }
+        UserProfileDTO dto = new UserProfileDTO();
+        BeanUtils.copyProperties(user, dto);
+        return Result.success(dto);
     }
 }

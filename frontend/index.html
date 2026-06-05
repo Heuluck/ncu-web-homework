@@ -373,7 +373,7 @@
   </main>
 </div>
 
-<!-- 聊天记录弹窗（移到最外层，避免被遮挡） -->
+<!-- 聊天记录弹窗（左右结构） -->
 <div class="chat-history-modal" id="chatHistoryModal">
   <div class="chat-history-modal-overlay" onclick="toggleChatHistoryModal()"></div>
   <div class="chat-history-modal-content">
@@ -384,40 +384,46 @@
       </button>
     </div>
     <div class="chat-history-modal-body">
-      <div class="chat-history-search">
-        <input type="text" class="chat-history-input" id="historyKeyword" placeholder="搜索聊天记录...">
-      </div>
-      <div class="chat-history-filters">
-        <div style="display:flex;flex-direction:column;gap:4px;">
-          <label style="font-size:12px;color:var(--text-muted);font-weight:500;">开始日期</label>
-          <input type="date" class="chat-history-input" id="historyStartDate">
+      <!-- 左侧面板：搜索和筛选 -->
+      <div class="chat-history-sidebar">
+        <div class="chat-history-search">
+          <input type="text" class="chat-history-input" id="historyKeyword" placeholder="搜索聊天记录...">
         </div>
-        <div style="display:flex;flex-direction:column;gap:4px;">
-          <label style="font-size:12px;color:var(--text-muted);font-weight:500;">结束日期</label>
-          <input type="date" class="chat-history-input" id="historyEndDate">
+        <div class="chat-history-filters">
+          <div style="display:flex;flex-direction:column;gap:4px;">
+            <label style="font-size:12px;color:var(--text-muted);font-weight:500;">开始日期</label>
+            <input type="date" class="chat-history-input" id="historyStartDate">
+          </div>
+          <div style="display:flex;flex-direction:column;gap:4px;">
+            <label style="font-size:12px;color:var(--text-muted);font-weight:500;">结束日期</label>
+            <input type="date" class="chat-history-input" id="historyEndDate">
+          </div>
+        </div>
+        <div class="chat-history-actions">
+          <button class="btn btn-primary btn-sm" onclick="searchChatHistory()" style="width:100%;">
+            <i data-lucide="search"></i> 搜索
+          </button>
+          <button class="btn btn-ghost btn-sm" onclick="resetChatHistorySearch()" style="width:100%;">
+            <i data-lucide="refresh-cw"></i> 重置
+          </button>
+        </div>
+        <div class="chat-history-export">
+          <span style="font-size:var(--text-sm);color:var(--text-muted);margin-bottom:4px;display:block;">导出：</span>
+          <button class="btn btn-secondary btn-sm" onclick="exportChatHistory('txt')" style="width:100%;">
+            <i data-lucide="file-text"></i> TXT
+          </button>
+          <button class="btn btn-secondary btn-sm" onclick="exportChatHistory('csv')" style="width:100%;margin-top:6px;">
+            <i data-lucide="file-spreadsheet"></i> CSV
+          </button>
         </div>
       </div>
-      <div class="chat-history-actions">
-        <button class="btn btn-primary btn-sm" onclick="searchChatHistory()">
-          <i data-lucide="search"></i> 搜索
-        </button>
-        <button class="btn btn-ghost btn-sm" onclick="resetChatHistorySearch()">
-          <i data-lucide="refresh-cw"></i> 重置
-        </button>
-      </div>
-      <div class="chat-history-export">
-        <span style="font-size: var(--text-sm); color: var(--text-muted);">导出：</span>
-        <button class="btn btn-secondary btn-sm" onclick="exportChatHistory('txt')">
-          <i data-lucide="file-text"></i> TXT
-        </button>
-        <button class="btn btn-secondary btn-sm" onclick="exportChatHistory('csv')">
-          <i data-lucide="file-spreadsheet"></i> CSV
-        </button>
-      </div>
-      <div class="chat-history-messages" id="chatHistoryMessages">
-        <div class="chat-history-empty">
-          <i data-lucide="message-square" style="width: 48px; height: 48px; color: var(--slate-300);"></i>
-          <p>点击搜索按钮查看聊天记录</p>
+      <!-- 右侧面板：消息列表 -->
+      <div class="chat-history-main">
+        <div class="chat-history-messages" id="chatHistoryMessages">
+          <div class="chat-history-empty">
+            <i data-lucide="message-square" style="width: 48px; height: 48px; color: var(--slate-300);"></i>
+            <p>点击搜索按钮查看聊天记录</p>
+          </div>
         </div>
       </div>
     </div>

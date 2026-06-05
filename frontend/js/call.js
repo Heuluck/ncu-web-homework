@@ -283,6 +283,7 @@ const CallManager = {
   hangup() {
     if (this.callState === 'CALLING') {
       WebSocketManager.sendCallSignal(this.partnerId, { type: 'cancel', calleeId: this.partnerId });
+      this._endCall('已取消');
     } else {
       const duration = this.callStartTime
         ? Math.round((Date.now() - this.callStartTime) / 1000) : 0;

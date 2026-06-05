@@ -516,11 +516,6 @@
     FriendManager.checkPendingRequests();
   }
 
-  // 初始化语音管理器（恢复已播放状态等）
-  if (typeof VoiceManager !== 'undefined') {
-    VoiceManager.init();
-  }
-
   // ===== 初始化表情选择器 =====
   EmojiPicker.init();
 

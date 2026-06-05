@@ -11,22 +11,6 @@ const VoiceManager = {
   recordTimer: null,
   currentAudio: null,
   playingMessageId: null,
-  playedVoiceIds: new Set(),  // 已播放语音 ID 集合
-
-  /** 初始化：从 localStorage 恢复已播放状态 */
-  init() {
-    try {
-      const stored = localStorage.getItem('voice_played_ids');
-      if (stored) {
-        const ids = JSON.parse(stored);
-        if (Array.isArray(ids)) {
-          this.playedVoiceIds = new Set(ids.slice(-200)); // 最多保留 200 条
-        }
-      }
-    } catch (e) {
-      console.warn('[Voice] 无法恢复已播放状态:', e);
-    }
-  },
 
   /**
    * 切换录音状态（点击切换：开始/停止）
@@ -204,9 +188,6 @@ const VoiceManager = {
    * 播放语音
    */
   playAudio(messageId, fileUrl, duration) {
-    // 标记为已播放，移除红点
-    this._markPlayed(messageId);
-
     // 如果点击的是同一个正在播放的消息，则暂停
     if (this.currentAudio && this.playingMessageId === messageId) {
       this.currentAudio.pause();
@@ -287,11 +268,9 @@ const VoiceManager = {
     const secs = duration % 60;
     const durationText = mins > 0 ? `${mins}'${String(secs).padStart(2, '0')}"` : `${secs}"`;
     const fileUrl = msg.fileUrl || msg.audioUrl || '';
-    const isUnread = !isSelf && !this.playedVoiceIds.has(msg.id);
 
     return `
-      <div class="voice-bubble ${isSelf ? 'voice-self' : ''} ${isUnread ? 'voice-unread' : ''}" data-msg-id="${msg.id}">
-        ${isUnread ? '<span class="voice-unread-dot"></span>' : ''}
+      <div class="voice-bubble ${isSelf ? 'voice-self' : ''}" data-msg-id="${msg.id}">
         <button class="voice-play-btn" onclick="VoiceManager.playAudio('${msg.id}', '${fileUrl.replace(/'/g, "\\'")}', ${duration})" title="播放语音">
           <i data-lucide="play" class="voice-play-icon"></i>
         </button>
@@ -301,25 +280,6 @@ const VoiceManager = {
         <span class="voice-duration">${durationText}</span>
       </div>
     `;
-  },
-
-  /** 标记语音为已播放 */
-  _markPlayed(messageId) {
-    if (!messageId) return;
-    this.playedVoiceIds.add(messageId);
-    // 持久化到 localStorage
-    try {
-      const ids = [...this.playedVoiceIds].slice(-200);
-      localStorage.setItem('voice_played_ids', JSON.stringify(ids));
-    } catch (e) {
-      console.warn('[Voice] 保存已播放状态失败:', e);
-    }
-    const bubble = document.querySelector(`.voice-bubble[data-msg-id="${messageId}"]`);
-    if (bubble) {
-      bubble.classList.remove('voice-unread');
-      const dot = bubble.querySelector('.voice-unread-dot');
-      if (dot) dot.remove();
-    }
   },
 
   _updatePlayIcon(messageId, isPlaying) {

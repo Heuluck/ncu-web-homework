@@ -246,6 +246,7 @@ public class ChatController {
     @MessageMapping("/call.reject")
     public void handleCallReject(CallSignal payload, Principal principal) {
         Long rejecterId = Long.valueOf(principal.getName());
+        Long callerId = payload.getCalleeId(); // 拒绝时 calleeId 是主叫方
 
         Map<String, Object> signal = new HashMap<>();
         signal.put("type", "CALL_REJECT");
@@ -253,8 +254,12 @@ public class ChatController {
         signal.put("reason", payload.getReason() != null ? payload.getReason() : "decline");
 
         messagingTemplate.convertAndSendToUser(
-                String.valueOf(payload.getCalleeId()), "/queue/call", signal);
-        log.info("通话拒绝: from={} reason={}", rejecterId, payload.getReason());
+                String.valueOf(callerId), "/queue/call", signal);
+
+        // 保存通话记录：以拨打方为 senderId，消息出现在拨打方一侧
+        saveCallRecord(callerId, rejecterId, "对方已拒绝");
+
+        log.info("通话拒绝: rejecter={} caller={}", rejecterId, callerId);
     }
 
     /**
@@ -318,14 +323,19 @@ public class ChatController {
     @MessageMapping("/call.cancel")
     public void handleCallCancel(CallSignal payload, Principal principal) {
         Long callerId = Long.valueOf(principal.getName());
+        Long calleeId = payload.getCalleeId();
 
         Map<String, Object> signal = new HashMap<>();
         signal.put("type", "CALL_CANCEL");
         signal.put("callerId", callerId);
 
         messagingTemplate.convertAndSendToUser(
-                String.valueOf(payload.getCalleeId()), "/queue/call", signal);
-        log.info("通话取消: caller={}", callerId);
+                String.valueOf(calleeId), "/queue/call", signal);
+
+        // 保存通话记录：caller 取消，双方在聊天界面可见
+        saveCallRecord(callerId, calleeId, "已取消");
+
+        log.info("通话取消: caller={} callee={}", callerId, calleeId);
     }
 
     // ==================== 内部消息体 ====================

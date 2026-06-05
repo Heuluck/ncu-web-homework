@@ -214,10 +214,6 @@
 .voice-recording-hint{font-size:var(--text-sm);color:var(--text-muted)}
 @keyframes voice-pulse{0%,100%{opacity:1}50%{opacity:0.3}}
 
-/* 语音未读红点 */
-.voice-unread-dot{position:absolute;top:-4px;right:-4px;width:10px;height:10px;background:var(--color-danger);border-radius:50%;border:2px solid var(--bg-app);z-index:1}
-.voice-unread{position:relative}
-
 /* 通话记录样式 */
 .message-call{display:inline-flex;align-items:center;gap:6px;font-size:var(--text-sm);color:var(--slate-500)}
 

@@ -256,8 +256,6 @@
 .vol-icon{width:14px;height:14px;color:rgba(255,255,255,0.6);flex-shrink:0}
 .vol-track{flex:1;height:4px;background:rgba(255,255,255,0.15);border-radius:2px;overflow:hidden}
 .vol-fill{height:100%;width:0%;background:var(--color-success);border-radius:2px;transition:width 60ms linear}
-.vol-item-clickable{cursor:pointer;padding:2px 0}
-.vol-item-clickable:hover .vol-icon{color:#fff}
 
 /* ========== 按钮通用样式补全 ========== */
 .btn-sm{padding:var(--space-1) var(--space-3);font-size:var(--text-xs);border-radius:var(--radius-md)}

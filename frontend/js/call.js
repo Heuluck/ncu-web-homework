@@ -443,9 +443,10 @@ const CallManager = {
     if (!this.remoteAudio) return;
     this.isSpeakerMuted = !this.isSpeakerMuted;
     this.remoteAudio.muted = this.isSpeakerMuted;
-    const icon = document.getElementById('speaker-vol-icon');
-    if (icon) {
-      icon.setAttribute('data-lucide', this.isSpeakerMuted ? 'volume-x' : 'volume-2');
+    const btn = document.getElementById('call-speaker-btn');
+    if (btn) {
+      btn.innerHTML = this.isSpeakerMuted
+        ? '<i data-lucide="volume-x"></i>' : '<i data-lucide="volume-2"></i>';
       if (window.lucide) lucide.createIcons();
     }
     Utils.showToast(this.isSpeakerMuted ? '听筒已静音' : '听筒已取消静音', 'info');
@@ -510,7 +511,7 @@ const CallManager = {
     } else if (mode === 'calling') {
       el.innerHTML = `<div class="call-container calling"><img class="call-avatar" src="${avatarUrl}" alt="" onerror="this.src='${Utils.getAvatarUrl(null, 'user')}'"><div class="call-name">${Utils.escapeHtml(this.partnerName)}</div><div class="call-status" id="call-status-text">正在呼叫...</div><div class="call-actions"><button class="call-btn call-btn-reject" onclick="CallManager.hangup()"><i data-lucide="phone-off"></i></button></div></div>`;
     } else if (mode === 'ongoing') {
-      el.innerHTML = `<div class="call-container ongoing"><img class="call-avatar call-avatar-ongoing" src="${avatarUrl}" alt="" onerror="this.src='${Utils.getAvatarUrl(null, 'user')}'"><div class="call-name">${Utils.escapeHtml(this.partnerName)}</div><div class="call-status" id="call-status-text" style="display:none"></div><div class="call-timer" id="call-timer">00:00</div><div class="call-volume-row"><div class="vol-item"><i data-lucide="mic" class="vol-icon"></i><div class="vol-track"><div class="vol-fill" id="mic-vol-fill"></div></div></div><div class="vol-item vol-item-clickable" onclick="CallManager.toggleSpeakerMute()"><i data-lucide="volume-2" class="vol-icon" id="speaker-vol-icon"></i><div class="vol-track"><div class="vol-fill" id="speaker-vol-fill"></div></div></div></div><div class="call-actions"><button class="call-btn call-btn-mute" id="call-mute-btn" onclick="CallManager.toggleMute()"><i data-lucide="mic"></i></button><button class="call-btn call-btn-reject" onclick="CallManager.hangup()"><i data-lucide="phone-off"></i></button></div></div>`;
+      el.innerHTML = `<div class="call-container ongoing"><img class="call-avatar call-avatar-ongoing" src="${avatarUrl}" alt="" onerror="this.src='${Utils.getAvatarUrl(null, 'user')}'"><div class="call-name">${Utils.escapeHtml(this.partnerName)}</div><div class="call-status" id="call-status-text" style="display:none"></div><div class="call-timer" id="call-timer">00:00</div><div class="call-volume-row"><div class="vol-item"><i data-lucide="mic" class="vol-icon"></i><div class="vol-track"><div class="vol-fill" id="mic-vol-fill"></div></div></div><div class="vol-item"><i data-lucide="volume-2" class="vol-icon" id="speaker-vol-icon"></i><div class="vol-track"><div class="vol-fill" id="speaker-vol-fill"></div></div></div></div><div class="call-actions"><button class="call-btn call-btn-mute" id="call-mute-btn" onclick="CallManager.toggleMute()"><i data-lucide="mic"></i></button><button class="call-btn call-btn-mute" id="call-speaker-btn" onclick="CallManager.toggleSpeakerMute()"><i data-lucide="volume-2"></i></button><button class="call-btn call-btn-reject" onclick="CallManager.hangup()"><i data-lucide="phone-off"></i></button></div></div>`;
     }
 
     document.body.appendChild(el);

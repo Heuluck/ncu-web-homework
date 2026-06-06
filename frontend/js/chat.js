@@ -45,6 +45,14 @@ const ChatManager = {
     const info = this.currentFriendInfo;
     if (!info) return;
 
+    // 更新更多按钮为私聊样式
+    const moreBtn = document.getElementById('chatMoreBtn');
+    if (moreBtn) {
+      moreBtn.innerHTML = '<i data-lucide="more-vertical"></i>';
+      moreBtn.title = '更多';
+      lucide.createIcons({ nodes: [moreBtn] });
+    }
+
     // 如果 blockStatus 未设置，尝试从 FriendManager 查找
     if (!info.blockStatus && typeof FriendManager !== 'undefined' && FriendManager.groups) {
       for (const group of FriendManager.groups) {

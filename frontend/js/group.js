@@ -140,6 +140,15 @@ const GroupManager = {
 
     _renderGroupHeader() {
         if (!this.currentGroupInfo) return;
+
+        // 更新更多按钮为群聊样式（机器人图标）
+        const moreBtn = document.getElementById('chatMoreBtn');
+        if (moreBtn) {
+            moreBtn.innerHTML = '<i data-lucide="bot"></i>';
+            moreBtn.title = 'AI 机器人';
+            lucide.createIcons({ nodes: [moreBtn] });
+        }
+
         document.getElementById('chatHeader').style.display = '';
         const avatarEl = document.getElementById('chatAvatar');
         if (this.currentGroupInfo.avatar) {

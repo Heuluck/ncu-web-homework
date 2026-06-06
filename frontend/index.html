@@ -522,6 +522,27 @@
   </div>
 </div>
 
+<!-- 粘贴图片确认模态框 -->
+<div id="pasteImageModal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center;">
+  <div id="pasteImageOverlay" style="position:absolute; top:0; left:0; right:0; bottom:0;"></div>
+  <div style="position:relative; background:var(--bg-app); border-radius:var(--radius-2xl); box-shadow:var(--shadow-lg); width:90%; max-width:400px; overflow:hidden; animation:scaleIn 200ms var(--ease-out);">
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:var(--space-4) var(--space-5); border-bottom:1px solid var(--border-subtle);">
+      <h3 style="font-size:var(--text-lg); font-weight:var(--font-semibold); margin:0;">发送图片</h3>
+      <button class="btn-icon" onclick="closePasteImageModal()" style="cursor:pointer;">
+        <i data-lucide="x"></i>
+      </button>
+    </div>
+    <div style="padding:var(--space-5); text-align:center;">
+      <img id="pasteImagePreview" src="" alt="预览" style="max-width:100%; max-height:300px; border-radius:var(--radius-lg); object-fit:contain;">
+      <p id="pasteImageSize" style="margin-top:var(--space-3); font-size:var(--text-sm); color:var(--text-muted);"></p>
+    </div>
+    <div style="display:flex; justify-content:flex-end; gap:var(--space-3); padding:var(--space-4) var(--space-5); border-top:1px solid var(--border-subtle);">
+      <button id="pasteImageCancel" class="btn btn-ghost">取消</button>
+      <button id="pasteImageConfirm" class="btn btn-primary">发送</button>
+    </div>
+  </div>
+</div>
+
 <!-- SockJS + STOMP.js CDN -->
 <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
@@ -1292,6 +1313,64 @@
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(link.href);
+  }
+
+  // ===== 粘贴图片发送 =====
+  const pasteImageModal = document.getElementById('pasteImageModal');
+  const pasteImagePreview = document.getElementById('pasteImagePreview');
+  const pasteImageSize = document.getElementById('pasteImageSize');
+  const pasteImageConfirm = document.getElementById('pasteImageConfirm');
+  const pasteImageCancel = document.getElementById('pasteImageCancel');
+  let pendingPasteFile = null;
+
+  // 监听输入框粘贴事件
+  messageInput.addEventListener('paste', async (e) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+
+    for (const item of items) {
+      if (item.type.startsWith('image/')) {
+        e.preventDefault();
+        const file = item.getAsFile();
+        if (!file) continue;
+
+        // 显示预览
+        pendingPasteFile = file;
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          pasteImagePreview.src = ev.target.result;
+          pasteImageSize.textContent = Utils.formatFileSize(file.size);
+          pasteImageModal.style.display = 'flex';
+        };
+        reader.readAsDataURL(file);
+        break;
+      }
+    }
+  });
+
+  // 确认发送粘贴的图片
+  pasteImageConfirm.addEventListener('click', async () => {
+    if (!pendingPasteFile) return;
+    const file = pendingPasteFile;
+    closePasteImageModal();
+
+    if (GroupManager.currentGroupId) {
+      await GroupManager.sendGroupImage(file);
+    } else if (ChatManager.currentFriendId) {
+      await ChatManager.sendImage(file);
+    } else {
+      Utils.showToast('请先选择一个聊天对象', 'warning');
+    }
+  });
+
+  // 取消粘贴图片
+  pasteImageCancel.addEventListener('click', closePasteImageModal);
+  document.getElementById('pasteImageOverlay').addEventListener('click', closePasteImageModal);
+
+  function closePasteImageModal() {
+    pasteImageModal.style.display = 'none';
+    pasteImagePreview.src = '';
+    pendingPasteFile = null;
   }
 </script>
 </body>

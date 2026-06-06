@@ -19,6 +19,7 @@ const ChatManager = {
     }
 
     this.currentFriendId = friendId;
+    const openedFor = friendId; // 记录本次打开的 ID，防止异步回调时 ID 已变
     this.currentPage = 1;
     this.hasMore = true;
 
@@ -33,6 +34,8 @@ const ChatManager = {
     messagesEl.innerHTML = '<div class="chat-loading"><div class="spinner"></div></div>';
 
     await this.loadHistory(friendId, 1, true);
+    // 异步返回后检查是否仍然是当前会话
+    if (this.currentFriendId !== openedFor) return;
     this._markAsRead(friendId);
     ConversationManager.clearUnread(friendId);
     ConversationManager.refreshMuteBtn();

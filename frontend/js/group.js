@@ -91,6 +91,7 @@ const GroupManager = {
         }
         
         this.currentGroupId = groupId;
+        const openedFor = groupId; // 记录本次打开的 ID，防止异步回调时 ID 已变
         this.currentPage = 1;
         this.hasMore = true;
 
@@ -103,6 +104,8 @@ const GroupManager = {
         if (callBtn) callBtn.style.display = 'none'; // 群聊隐藏语音通话
 
         const infoRes = await API.get(`/api/group/info/${groupId}`);
+        // 异步返回后检查是否仍然是当前群聊
+        if (this.currentGroupId !== openedFor) return;
         if (infoRes && infoRes.code === 200) {
             this.currentGroupInfo = infoRes.data;
             this._renderGroupHeader();
@@ -114,6 +117,7 @@ const GroupManager = {
         }
         // 预加载群成员（异步不阻塞）
         API.get(`/api/group/${groupId}/members`).then(res => {
+            if (this.currentGroupId !== openedFor) return;
             if (res && res.code === 200) {
                 this.members = res.data || [];
             }
@@ -124,6 +128,7 @@ const GroupManager = {
         messagesEl.innerHTML = '<div class="chat-loading"><div class="spinner"></div></div>';
 
         await this.loadGroupMessages(groupId, 1, true);
+        if (this.currentGroupId !== openedFor) return;
         this._markGroupRead(groupId);
         this._clearGroupUnread(groupId);
         // 清除最近会话列表中的群聊未读

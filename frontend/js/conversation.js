@@ -193,7 +193,9 @@ const ConversationManager = {
   selectConversation(id, type) {
     type = type || 'private';
     document.querySelectorAll('#conversationList .list-item').forEach(item => {
-      item.classList.toggle('active', parseInt(item.dataset.friendId) === id);
+      const itemId = parseInt(item.dataset.friendId);
+      const itemType = item.dataset.convType || 'private';
+      item.classList.toggle('active', itemId === id && itemType === type);
     });
     if (type === 'group') {
       // 切换到群聊时清除私聊状态

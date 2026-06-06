@@ -873,7 +873,7 @@
   }
 
   messageInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
       if (atMentionActive && atMentionItems.length > 0) {
         e.preventDefault();
         selectAtMention(atMentionSelectedIdx);

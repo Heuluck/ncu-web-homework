@@ -165,7 +165,7 @@ const FriendManager = {
                 </div>
                 <div class="modal-body">
                     <div class="form-group">
-                        <input type="text" id="searchKeyword" class="input-control" placeholder="输入用户名或昵称搜索..." onkeydown="if(event.key==='Enter')FriendManager.doSearch()">
+                        <input type="text" id="searchKeyword" class="input-control" placeholder="输入用户名或昵称搜索..." onkeydown="if(event.key==='Enter'&&!event.isComposing)FriendManager.doSearch()">
                     </div>
                     <div id="searchResults" style="margin-top: 12px;"></div>
                 </div>

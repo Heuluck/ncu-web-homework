@@ -31,6 +31,19 @@ CREATE TABLE IF NOT EXISTS `group_bot` (
   INDEX idx_bot_id (`bot_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- group_bot 表新增 added_by 字段（幂等）
+SET @col_added_by = (
+  SELECT COUNT(*) FROM information_schema.columns
+  WHERE table_schema = 'chat_system' AND table_name = 'group_bot' AND column_name = 'added_by'
+);
+SET @sql_added_by = IF(@col_added_by = 0,
+  'ALTER TABLE `group_bot` ADD COLUMN `added_by` BIGINT NOT NULL COMMENT "添加者 userId" AFTER `bot_id`',
+  'SELECT 1'
+);
+PREPARE stmt_ab FROM @sql_added_by;
+EXECUTE stmt_ab;
+DEALLOCATE PREPARE stmt_ab;
+
 -- group_message 表新增 bot_id 字段（幂等：仅当列不存在时添加）
 SET @col_exists = (
   SELECT COUNT(*) FROM information_schema.columns

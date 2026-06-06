@@ -23,9 +23,9 @@ const GroupSettingsModal = {
         lucide.createIcons();
 
         // 遮罩点击关闭
-        modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
+        modal.addEventListener('click', (e) => { if (e.target === modal) Utils.closeModalAnimated(modal); });
 
-        const closeModal = () => modal.remove();
+        const closeModal = () => Utils.closeModalAnimated(modal);
         modal.querySelector('.modal-close').addEventListener('click', closeModal);
         document.getElementById('closeSettingsBtn').addEventListener('click', closeModal);
 

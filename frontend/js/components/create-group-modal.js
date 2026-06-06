@@ -156,7 +156,7 @@ const CreateGroupModal = {
             renderFriendList(filterFriends());
         });
 
-        const closeModal = () => modal.remove();
+        const closeModal = () => Utils.closeModalAnimated(modal);
         modal.querySelector('.modal-close').addEventListener('click', closeModal);
         document.getElementById('cancelCreateBtn').addEventListener('click', closeModal);
         modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });

@@ -4,7 +4,8 @@ const GroupMemberPanel = {
     allMembers: [],
 
     close() {
-        document.getElementById('groupMemberPanelModal')?.remove();
+        const el = document.getElementById('groupMemberPanelModal');
+        if (el) Utils.closeModalAnimated(el);
     },
 
     async show(groupId, myRole) {

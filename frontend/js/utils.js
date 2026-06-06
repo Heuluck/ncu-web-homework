@@ -216,5 +216,26 @@ const Utils = {
         setTimeout(() => inThrottle = false, limit);
       }
     };
+  },
+
+  /**
+   * 带退出动画关闭模态框
+   * @param {HTMLElement} el - 模态框容器元素
+   * @param {Function} [onDone] - 动画结束后的回调（默认 el.remove()）
+   */
+  closeModalAnimated(el, onDone) {
+    if (!el) return;
+    el.classList.add('closing');
+    const handler = () => {
+      el.removeEventListener('animationend', handler);
+      if (onDone) { onDone(); } else { el.remove(); }
+    };
+    el.addEventListener('animationend', handler);
+    // 兜底：若动画未触发，250ms 后强制执行
+    setTimeout(() => {
+      if (el.classList.contains('closing')) {
+        if (onDone) { onDone(); } else { el.remove(); }
+      }
+    }, 300);
   }
 };

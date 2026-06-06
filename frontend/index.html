@@ -20,6 +20,7 @@
       align-items: center;
       justify-content: center;
       z-index: 1000;
+      animation: fadeIn 200ms var(--ease-out) both;
     }
     .modal-container {
       background: var(--bg-app);
@@ -31,6 +32,7 @@
       display: flex;
       flex-direction: column;
       overflow: hidden;
+      animation: scaleIn 250ms var(--ease-out) both;
     }
     .modal-header {
       display: flex;
@@ -996,9 +998,12 @@
     const modal = document.getElementById('chatHistoryModal');
     const isActive = modal.classList.contains('active');
     if (isActive) {
-      modal.classList.remove('active');
+      Utils.closeModalAnimated(modal, () => {
+        modal.classList.remove('active', 'closing');
+      });
     } else {
       modal.classList.add('active');
+      modal.style.display = ''; // 清除可能残留的 inline style
       setTimeout(() => {
         lucide.createIcons();
         loadAllChatHistory();

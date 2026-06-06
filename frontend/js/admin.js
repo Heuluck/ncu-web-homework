@@ -327,8 +327,12 @@ const AdminApp = {
   },
 
   _closeModal() {
-    document.getElementById('admin-modal-overlay').style.display = 'none';
-    document.getElementById('admin-modal-content').innerHTML = '';
+    const overlay = document.getElementById('admin-modal-overlay');
+    Utils.closeModalAnimated(overlay, () => {
+      overlay.style.display = 'none';
+      overlay.classList.remove('closing');
+      document.getElementById('admin-modal-content').innerHTML = '';
+    });
   },
 
   // ========== 敏感词管理 ==========

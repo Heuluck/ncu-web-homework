@@ -581,8 +581,10 @@ const GroupManager = {
     closeImagePreview() {
         const modal = document.getElementById('imagePreviewModal');
         if (modal) {
-            modal.classList.remove('active');
-            document.body.style.overflow = '';
+            Utils.closeModalAnimated(modal, () => {
+                modal.classList.remove('active', 'closing');
+                document.body.style.overflow = '';
+            });
         }
     },
 

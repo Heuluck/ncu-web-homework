@@ -87,7 +87,7 @@ const BotModal = {
         lucide.createIcons();
 
         this._bindCommon(modal);
-        document.getElementById('botCloseBtn').addEventListener('click', () => modal.remove());
+        document.getElementById('botCloseBtn').addEventListener('click', () => Utils.closeModalAnimated(modal));
         document.getElementById('botMyBotsBtn').addEventListener('click', () => this._renderMyBotsView());
 
         modal.querySelectorAll('.bot-remove-btn').forEach(btn => {
@@ -397,8 +397,8 @@ const BotModal = {
     // ==================== 公共方法 ====================
 
     _bindCommon(modal) {
-        modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
-        modal.querySelector('.modal-close').addEventListener('click', () => modal.remove());
+        modal.addEventListener('click', (e) => { if (e.target === modal) Utils.closeModalAnimated(modal); });
+        modal.querySelector('.modal-close').addEventListener('click', () => Utils.closeModalAnimated(modal));
     },
 
     _removeExisting() {

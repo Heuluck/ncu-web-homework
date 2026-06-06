@@ -12,4 +12,10 @@ COPY --from=builder /app/target/*.jar app.jar
 COPY application.yml /app/config/application.yml
 RUN mkdir -p /app/uploads
 EXPOSE 8080
-ENTRYPOINT ["java", "-jar", "app.jar"]
+ENTRYPOINT ["java", \
+    "-Xms256m", "-Xmx512m", \
+    "-XX:+UseG1GC", "-XX:MaxGCPauseMillis=200", \
+    "-XX:+UseStringDeduplication", \
+    "-Djava.security.egd=file:/dev/./urandom", \
+    "-jar", "app.jar", \
+    "--spring.config.location=/app/config/application.yml"]

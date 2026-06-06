@@ -141,21 +141,15 @@ public class PrivateMessageServiceImpl implements PrivateMessageService {
 
     @Override
     public List<ConversationVO> getRecentConversations(Long userId) {
-        // 查询所有与当前用户相关的消息，按最近消息分组
-        // 使用 SQL 子查询获取每个会话的最后一条消息和未读数
-        
-        // 1. 获取所有与 userId 相关的对方 ID（去重）
-        LambdaQueryWrapper<PrivateMessage> wrapper = new LambdaQueryWrapper<>();
-        wrapper.and(w -> w
-                .eq(PrivateMessage::getSenderId, userId)
-                .or()
-                .eq(PrivateMessage::getReceiverId, userId)
-        );
-        wrapper.select(PrivateMessage::getSenderId, PrivateMessage::getReceiverId);
-        List<PrivateMessage> allMessages = privateMessageMapper.selectList(wrapper);
+        // 批量获取每个会话的最后一条消息（1 次查询替代 N 次查询）
+        List<PrivateMessage> lastMessages = privateMessageMapper.getLastMessagesPerConversation(userId);
+        if (lastMessages.isEmpty()) {
+            return Collections.emptyList();
+        }
 
+        // 收集所有好友 ID
         Set<Long> friendIds = new HashSet<>();
-        for (PrivateMessage pm : allMessages) {
+        for (PrivateMessage pm : lastMessages) {
             if (pm.getSenderId().equals(userId)) {
                 friendIds.add(pm.getReceiverId());
             } else {
@@ -163,34 +157,27 @@ public class PrivateMessageServiceImpl implements PrivateMessageService {
             }
         }
 
-        if (friendIds.isEmpty()) {
-            return Collections.emptyList();
+        // 批量查询用户信息（1 次查询）
+        Map<Long, User> userMap = new HashMap<>();
+        if (!friendIds.isEmpty()) {
+            userMapper.selectBatchIds(friendIds).forEach(u -> userMap.put(u.getId(), u));
         }
 
-        // 2. 查询每个会话的最后一条消息和未读数
+        // 批量查询未读数（1 次查询）
+        Map<Long, Long> unreadMap = new HashMap<>();
+        List<Map<String, Object>> unreadRows = privateMessageMapper.getUnreadCountsBySender(userId);
+        for (Map<String, Object> row : unreadRows) {
+            Long senderId = ((Number) row.get("senderId")).longValue();
+            Long cnt = ((Number) row.get("cnt")).longValue();
+            unreadMap.put(senderId, cnt);
+        }
+
         List<ConversationVO> conversations = new ArrayList<>();
-        for (Long friendId : friendIds) {
-            // 最后一条消息
-            LambdaQueryWrapper<PrivateMessage> lastMsgWrapper = new LambdaQueryWrapper<>();
-            lastMsgWrapper.and(w -> w
-                    .and(w1 -> w1.eq(PrivateMessage::getSenderId, userId).eq(PrivateMessage::getReceiverId, friendId))
-                    .or(w2 -> w2.eq(PrivateMessage::getSenderId, friendId).eq(PrivateMessage::getReceiverId, userId))
-            );
-            lastMsgWrapper.orderByDesc(PrivateMessage::getCreateTime);
-            lastMsgWrapper.last("LIMIT 1");
-            PrivateMessage lastMsg = privateMessageMapper.selectOne(lastMsgWrapper);
+        for (PrivateMessage lastMsg : lastMessages) {
+            Long friendId = lastMsg.getSenderId().equals(userId)
+                    ? lastMsg.getReceiverId() : lastMsg.getSenderId();
 
-            if (lastMsg == null) continue;
-
-            // 未读数（对方发给我的未读消息）
-            LambdaQueryWrapper<PrivateMessage> unreadWrapper = new LambdaQueryWrapper<>();
-            unreadWrapper.eq(PrivateMessage::getSenderId, friendId)
-                    .eq(PrivateMessage::getReceiverId, userId)
-                    .eq(PrivateMessage::getStatus, 0);
-            Long unreadCount = privateMessageMapper.selectCount(unreadWrapper);
-
-            // 查询对方信息
-            User friend = userMapper.selectById(friendId);
+            User friend = userMap.get(friendId);
 
             ConversationVO vo = new ConversationVO();
             vo.setFriendId(friendId);
@@ -209,17 +196,10 @@ public class PrivateMessageServiceImpl implements PrivateMessageService {
             }
 
             vo.setLastTime(lastMsg.getCreateTime());
-            vo.setUnreadCount(unreadCount.intValue());
+            vo.setUnreadCount(unreadMap.getOrDefault(friendId, 0L).intValue());
 
             conversations.add(vo);
         }
-
-        // 3. 按最后消息时间倒序排列
-        conversations.sort((a, b) -> {
-            if (a.getLastTime() == null) return 1;
-            if (b.getLastTime() == null) return -1;
-            return b.getLastTime().compareTo(a.getLastTime());
-        });
 
         return conversations;
     }

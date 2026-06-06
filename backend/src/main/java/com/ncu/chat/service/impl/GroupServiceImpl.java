@@ -176,22 +176,41 @@ public class GroupServiceImpl implements GroupService {
         if (groupIds.isEmpty()) {
             return Collections.emptyList();
         }
+
+        // 批量查询群信息
         List<ChatGroup> groups = chatGroupMapper.selectBatchIds(groupIds);
         Map<Long, ChatGroup> groupMap = groups.stream()
+                .filter(g -> g.getDeleted() == 0)
                 .collect(Collectors.toMap(ChatGroup::getId, g -> g));
 
+        // 过滤有效群 ID
+        List<Long> validGroupIds = new ArrayList<>(groupMap.keySet());
+
+        // 批量查询当前用户在这些群的成员信息（1 次查询替代 N 次）
+        LambdaQueryWrapper<GroupMember> memberWrapper = new LambdaQueryWrapper<>();
+        memberWrapper.in(GroupMember::getGroupId, validGroupIds)
+                .eq(GroupMember::getUserId, userId)
+                .eq(GroupMember::getDeleted, 0);
+        List<GroupMember> members = groupMemberMapper.selectList(memberWrapper);
+        Set<Long> memberGroupIds = members.stream()
+                .map(GroupMember::getGroupId)
+                .collect(Collectors.toSet());
+
+        // 批量获取所有群的最后一条消息（1 次查询替代 N 次）
+        Map<Long, GroupMessage> lastMsgMap = new HashMap<>();
+        if (!validGroupIds.isEmpty()) {
+            List<GroupMessage> lastMessages = groupMessageMapper.getLastMessagesByGroupIds(validGroupIds);
+            for (GroupMessage msg : lastMessages) {
+                lastMsgMap.put(msg.getGroupId(), msg);
+            }
+        }
+
         List<GroupConversationVO> result = new ArrayList<>();
-        for (Long groupId : groupIds) {
+        for (Long groupId : validGroupIds) {
+            if (!memberGroupIds.contains(groupId)) continue;
+
             ChatGroup group = groupMap.get(groupId);
-            if (group == null || group.getDeleted() == 1) continue;
-
-            GroupMember member = getMember(groupId, userId);
-            if (member == null || member.getDeleted() == 1) continue;
-
-            LambdaQueryWrapper<GroupMessage> lastMsgWrapper = new LambdaQueryWrapper<>();
-            lastMsgWrapper.eq(GroupMessage::getGroupId, groupId)
-                    .orderByDesc(GroupMessage::getCreateTime).last("LIMIT 1");
-            GroupMessage lastMsg = groupMessageMapper.selectOne(lastMsgWrapper);
+            GroupMessage lastMsg = lastMsgMap.get(groupId);
 
             GroupConversationVO vo = new GroupConversationVO();
             vo.setGroupId(groupId);

@@ -185,7 +185,7 @@ class PrivateMessageServiceTest {
     @Test
     @DisplayName("获取最近会话 - 无消息时返回空列表")
     void getRecentConversations_Empty() {
-        when(privateMessageMapper.selectList(any(LambdaQueryWrapper.class)))
+        when(privateMessageMapper.getLastMessagesPerConversation(1L))
                 .thenReturn(Collections.emptyList());
 
         List<ConversationVO> result = privateMessageService.getRecentConversations(1L);

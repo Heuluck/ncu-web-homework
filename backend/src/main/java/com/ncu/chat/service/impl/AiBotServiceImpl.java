@@ -46,6 +46,9 @@ public class AiBotServiceImpl implements AiBotService {
     /** 限流：当前分钟时间戳（分钟级） */
     private volatile long currentMinute = 0;
 
+    /** 共享 RestTemplate（避免每次调用创建新实例） */
+    private final RestTemplate restTemplate = new RestTemplate();
+
     @Value("${bot.rate-limit.min-interval-ms:3000}")
     private long minIntervalMs;
 
@@ -326,18 +329,24 @@ public class AiBotServiceImpl implements AiBotService {
                             .orderByDesc(GroupMessage::getCreateTime)
                             .last("LIMIT " + maxContextMessages));
 
-            // 获取发送者名称映射 + 机器人名称映射
-            Map<Long, String> nameMap = new HashMap<>();
-            Map<Long, AiBot> botMap = new HashMap<>();
+            // 批量收集需要查询的 ID（避免 N+1）
+            Set<Long> botIds = new HashSet<>();
+            Set<Long> userIds = new HashSet<>();
             for (GroupMessage m : recentMsgs) {
                 if (m.getBotId() != null) {
-                    if (!botMap.containsKey(m.getBotId())) {
-                        botMap.put(m.getBotId(), aiBotMapper.selectById(m.getBotId()));
-                    }
-                } else if (!nameMap.containsKey(m.getSenderId())) {
-                    User u = userMapper.selectById(m.getSenderId());
-                    nameMap.put(m.getSenderId(), u != null ? u.getNickname() : "用户");
+                    botIds.add(m.getBotId());
+                } else {
+                    userIds.add(m.getSenderId());
                 }
+            }
+
+            Map<Long, AiBot> botMap = new HashMap<>();
+            if (!botIds.isEmpty()) {
+                aiBotMapper.selectBatchIds(botIds).forEach(b -> botMap.put(b.getId(), b));
+            }
+            Map<Long, String> nameMap = new HashMap<>();
+            if (!userIds.isEmpty()) {
+                userMapper.selectBatchIds(userIds).forEach(u -> nameMap.put(u.getId(), u.getNickname() != null ? u.getNickname() : "用户"));
             }
 
             // 构建 messages 数组
@@ -392,8 +401,7 @@ public class AiBotServiceImpl implements AiBotService {
             body.put("temperature", bot.getTemperature() != null ? bot.getTemperature().doubleValue() : 1.0);
             body.put("top_p", bot.getTopP() != null ? bot.getTopP().doubleValue() : 1.0);
 
-            // 发送请求
-            RestTemplate restTemplate = new RestTemplate();
+            // 发送请求（复用 RestTemplate 实例）
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
             headers.setBearerAuth(apiKey);

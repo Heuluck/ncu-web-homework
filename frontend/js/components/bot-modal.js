@@ -262,8 +262,18 @@ const BotModal = {
                         <input type="text" id="botName" class="input-control" placeholder="如：DeepSeek 助手" maxlength="50" value="${Utils.escapeHtml(pName)}">
                     </div>
                     <div class="form-group">
-                        <label class="form-label">头像 URL（留空使用默认）</label>
-                        <input type="text" id="botAvatar" class="input-control" placeholder="https://... 或留空" value="${Utils.escapeHtml(pAvatar)}">
+                        <label class="form-label">头像</label>
+                        <div class="profile-avatar-section" style="flex-direction:row;gap:12px;align-items:center;margin-bottom:8px;">
+                            <div class="profile-avatar-wrapper" style="cursor:pointer;position:relative;" onclick="document.getElementById('botAvatarInput').click()">
+                                <img id="botAvatarPreview" src="${pAvatar || BotManager.getDefaultBotAvatar(pName)}" alt="头像" class="avatar avatar-lg">
+                                <div class="profile-avatar-overlay">
+                                    <i data-lucide="camera" style="width:20px;height:20px;"></i>
+                                </div>
+                            </div>
+                            <span class="text-muted text-sm" style="line-height:1.4;">点击上传头像<br>或下方输入URL</span>
+                        </div>
+                        <input type="file" id="botAvatarInput" accept="image/*" style="display:none;">
+                        <input type="text" id="botAvatar" class="input-control" placeholder="https://... 或留空使用默认头像" value="${Utils.escapeHtml(pAvatar)}">
                     </div>
                     <div class="form-group">
                         <label class="form-label">Endpoint <span class="text-danger">*</span></label>
@@ -322,6 +332,30 @@ const BotModal = {
 
         document.body.appendChild(modal);
         lucide.createIcons();
+
+        // 头像上传
+        const avatarInput = document.getElementById('botAvatarInput');
+        const avatarPreview = document.getElementById('botAvatarPreview');
+        const avatarUrlInput = document.getElementById('botAvatar');
+        if (avatarInput) {
+            avatarInput.addEventListener('change', async () => {
+                const file = avatarInput.files[0];
+                if (!file) return;
+                const result = await API.upload(file);
+                if (result && result.code === 200) {
+                    avatarPreview.src = result.data.url;
+                    avatarUrlInput.value = result.data.url;
+                }
+            });
+        }
+        // 手动输入 URL 时同步预览
+        if (avatarUrlInput) {
+            avatarUrlInput.addEventListener('input', () => {
+                const url = avatarUrlInput.value.trim();
+                if (url) avatarPreview.src = url;
+                else avatarPreview.src = BotManager.getDefaultBotAvatar(document.getElementById('botName')?.value || 'bot');
+            });
+        }
 
         document.getElementById('botTriggerType').addEventListener('change', (e) => {
             document.getElementById('botProbabilityGroup').style.display = e.target.value === '2' ? '' : 'none';

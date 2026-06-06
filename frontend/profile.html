@@ -33,9 +33,6 @@
         <span class="text-muted text-sm">点击更换头像</span>
       </div>
 
-      <div id="successMsg" class="alert alert-success" style="display: none;"></div>
-      <div id="errorMsg" class="alert alert-error" style="display: none;"></div>
-
       <form id="profileForm" class="profile-form">
         <div class="input-group">
           <label class="input-label">用户名</label>
@@ -67,7 +64,6 @@
 
       <div class="profile-section">
         <h3 class="profile-section-title">修改密码</h3>
-        <div id="passwordMsg" class="alert" style="display: none;"></div>
         <form id="passwordForm" class="profile-form">
           <div class="input-group">
             <label class="input-label">原密码</label>
@@ -146,9 +142,9 @@
       if (result && result.code === 200) {
         Auth.setUser(result.data);
         updateStatusIndicator(parseInt(document.getElementById('status').value));
-        showAlert('successMsg', '保存成功', 'success');
+        Utils.showToast('保存成功', 'success');
       } else {
-        showAlert('errorMsg', result?.message || '保存失败', 'error');
+        Utils.showToast(result?.message || '保存失败', 'error');
       }
     });
     
@@ -162,11 +158,11 @@
       const result = await API.put('/api/user/password', { oldPassword, newPassword });
       
       if (result && result.code === 200) {
-        showAlert('passwordMsg', '密码修改成功', 'success');
+        Utils.showToast('密码修改成功', 'success');
         document.getElementById('oldPassword').value = '';
         document.getElementById('newPassword').value = '';
       } else {
-        showAlert('passwordMsg', result?.message || '修改失败', 'error');
+        Utils.showToast(result?.message || '修改失败', 'error');
       }
     });
     
@@ -185,14 +181,6 @@
     document.getElementById('status').addEventListener('change', function() {
       updateStatusIndicator(parseInt(this.value));
     });
-    
-    function showAlert(id, message, type) {
-      const el = document.getElementById(id);
-      el.textContent = message;
-      el.className = `alert alert-${type}`;
-      el.style.display = 'block';
-      setTimeout(() => el.style.display = 'none', 3000);
-    }
     
     lucide.createIcons();
     loadProfile();

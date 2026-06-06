@@ -142,6 +142,8 @@ const GroupManager = {
         if (!this.currentGroupInfo) return;
         // 私聊活跃时不渲染群聊头部
         if (typeof ChatManager !== 'undefined' && ChatManager.currentFriendId) return;
+        // 二次确认群聊状态未被异步切换覆盖
+        if (!this.currentGroupId) return;
 
         // 更新更多按钮为群聊样式（机器人图标）
         const moreBtn = document.getElementById('chatMoreBtn');
@@ -153,9 +155,14 @@ const GroupManager = {
 
         document.getElementById('chatHeader').style.display = '';
         const avatarEl = document.getElementById('chatAvatar');
+        // 重置头像元素的 alt（清除私聊残留）
+        avatarEl.alt = this.currentGroupInfo.name || '群聊';
         if (this.currentGroupInfo.avatar) {
             avatarEl.src = this.currentGroupInfo.avatar;
             avatarEl.style.display = '';
+            // 若之前无头像时创建了字母头像则移除
+            const oldLetter = avatarEl.parentElement?.querySelector('.group-letter-avatar');
+            if (oldLetter) oldLetter.remove();
         } else {
             // 无头像时用群名首字
             avatarEl.style.display = 'none';

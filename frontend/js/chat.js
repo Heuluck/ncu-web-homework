@@ -21,6 +21,54 @@ const ChatManager = {
     return token;
   },
 
+  /**
+   * 从权威来源获取好友信息（状态栏数据）
+   * 优先级：FriendManager > ConversationManager(仅私聊) > fallbackInfo > 占位符
+   * 避免从混合了私聊/群聊的 conversations 列表中误取群聊数据
+   */
+  _getFriendInfo(friendId, fallbackInfo) {
+    // 1) 从 FriendManager 获取（最权威的好友数据来源）
+    if (typeof FriendManager !== 'undefined' && FriendManager.groups) {
+      for (const group of FriendManager.groups) {
+        const friend = (group.friends || []).find(f => f.friendId === friendId);
+        if (friend) {
+          return {
+            friendId: friend.friendId,
+            nickname: friend.nickname,
+            avatar: friend.avatar,
+            onlineStatus: friend.onlineStatus,
+            blockStatus: friend.blockStatus || 'none'
+          };
+        }
+      }
+    }
+
+    // 2) 从 ConversationManager 获取（必须过滤 _type==='private'，防止群聊混入）
+    if (typeof ConversationManager !== 'undefined') {
+      const conv = ConversationManager.conversations.find(
+        c => c._type === 'private' && c.friendId === friendId
+      );
+      if (conv) {
+        return {
+          friendId: conv.friendId,
+          nickname: conv.nickname,
+          avatar: conv.avatar,
+          onlineStatus: conv.onlineStatus,
+          blockStatus: conv.blockStatus || 'none'
+        };
+      }
+    }
+
+    // 3) 使用 fallbackInfo（好友列表点击时传入）或占位符
+    return fallbackInfo || {
+      friendId,
+      nickname: '加载中...',
+      avatar: null,
+      onlineStatus: 0,
+      blockStatus: 'none'
+    };
+  },
+
   async openChat(friendId, fallbackInfo) {
     if (this.currentFriendId === friendId) return;
 
@@ -30,8 +78,8 @@ const ChatManager = {
     this.currentPage = 1;
     this.hasMore = true;
 
-    const conv = ConversationManager.conversations.find(c => c.friendId === friendId);
-    this.currentFriendInfo = conv || (fallbackInfo || { friendId, nickname: '加载中...', avatar: null, onlineStatus: 0 });
+    // 从权威来源获取好友信息（不再直接从混合了群聊的 conversations 列表取）
+    this.currentFriendInfo = this._getFriendInfo(friendId, fallbackInfo);
 
     if (token === this._sessionToken) this._renderHeader();
     if (token === this._sessionToken) this._updateInputState();
@@ -50,7 +98,8 @@ const ChatManager = {
   _renderHeader() {
     const info = this.currentFriendInfo;
     if (!info) return;
-    // 群聊活跃时不渲染私聊头部
+    // 防御：当前无活跃私聊或群聊活跃时，不渲染私聊头部
+    if (!this.currentFriendId) return;
     if (typeof GroupManager !== 'undefined' && GroupManager.currentGroupId) return;
 
     // 更新更多按钮为私聊样式
@@ -59,14 +108,6 @@ const ChatManager = {
       moreBtn.innerHTML = '<i data-lucide="more-vertical"></i>';
       moreBtn.title = '更多';
       lucide.createIcons({ nodes: [moreBtn] });
-    }
-
-    // 如果 blockStatus 未设置，尝试从 FriendManager 查找
-    if (!info.blockStatus && typeof FriendManager !== 'undefined' && FriendManager.groups) {
-      for (const group of FriendManager.groups) {
-        const f = (group.friends || []).find(x => x.friendId === info.friendId);
-        if (f && f.blockStatus) { info.blockStatus = f.blockStatus; break; }
-      }
     }
 
     document.getElementById('chatHeader').style.display = '';

@@ -1,6 +1,7 @@
 package com.ncu.chat.common;
 
 import lombok.extern.slf4j.Slf4j;
+import org.apache.catalina.connector.ClientAbortException;
 import org.springframework.validation.BindException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -9,6 +10,14 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    /**
+     * 客户端断开连接（Broken pipe）— 无需处理，客户端已不在
+     */
+    @ExceptionHandler(ClientAbortException.class)
+    public void handleClientAbort(ClientAbortException e) {
+        // 客户端已断开，不尝试写响应，避免 "No converter with preset Content-Type" 二次异常
+    }
 
     /**
      * 业务异常 — 消息可安全展示给前端

@@ -64,9 +64,17 @@ const CallManager = {
   localStream: null,
   remoteAudio: null,
 
-  /** STUN 服务器配置 */
+  /** STUN/TURN 服务器配置 — 优先使用自建 coturn */
   RTC_CONFIG: {
-    iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+    iceServers: [{
+      urls: [
+        'stun:' + (window.location.hostname) + ':3478',
+        'turn:' + (window.location.hostname) + ':3478'
+      ],
+      username: 'chat',
+      credential: 'chat-turn-password'
+    }],
+    iceCandidatePoolSize: 2
   },
 
   /**

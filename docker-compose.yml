@@ -13,6 +13,24 @@ services:
       - ./db/migration:/docker-entrypoint-initdb.d
     command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci --default-time-zone=+8:00
 
+  coturn:
+    image: coturn/coturn:4.6-alpine
+    container_name: chat-coturn
+    network_mode: host
+    environment:
+      TZ: Asia/Shanghai
+    command: |
+      -n --log-file=stdout
+      --listening-port=3478
+      --min-port=49152
+      --max-port=65535
+      --fingerprint
+      --lt-cred-mech
+      --user=chat:chat-turn-password
+      --realm=ncu-chat
+      --no-cli
+    restart: unless-stopped
+
   app:
     build: .
     container_name: chat-app

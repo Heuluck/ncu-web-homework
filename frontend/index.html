@@ -548,27 +548,37 @@
   // 认证检查
   if (!Auth.checkAuth()) location.href = '/login.html';
 
-  // 从 API 拉取最新用户信息
+  // 先拿缓存数据快速渲染（避免 WebSocket 还没连上时显示离线）
+  function renderMyProfile(u) {
+    document.getElementById('myName').textContent = u?.nickname || u?.username || '用户';
+    if (u?.signature) document.getElementById('mySignature').textContent = u.signature;
+    if (u?.avatar) document.getElementById('myAvatar').src = u.avatar;
+    const statusDot = document.getElementById('myStatus');
+    if (statusDot && u?.status !== undefined) {
+      statusDot.className = 'status-indicator';
+      if (u.status === 1) statusDot.classList.add('online');
+      else if (u.status === 2) statusDot.classList.add('busy');
+      else if (u.status === 3) statusDot.classList.add('dnd');
+    }
+    if (u?.role === 1) {
+      document.querySelectorAll('.admin-only').forEach(el => el.style.display = '');
+    }
+  }
+  renderMyProfile(Auth.getUser());
+
+  // 后台拉最新数据（只更新非状态字段，状态靠 WebSocket 同步）
   async function loadMyProfile() {
     const result = await API.get('/api/user/profile');
     if (result?.code === 200) {
       const u = result.data;
-      Auth.setUser(u);
-      document.getElementById('myName').textContent = u?.nickname || u?.username || '用户';
-      if (u?.signature) document.getElementById('mySignature').textContent = u.signature;
-      if (u?.avatar) document.getElementById('myAvatar').src = u.avatar;
-      const statusDot = document.getElementById('myStatus');
-      if (statusDot && u?.status !== undefined) {
-        statusDot.className = 'status-indicator';
-        if (u.status === 1) statusDot.classList.add('online');
-        else if (u.status === 2) statusDot.classList.add('busy');
-        else if (u.status === 3) statusDot.classList.add('dnd');
-      }
-      if (u?.role === 1) {
-        document.querySelectorAll('.admin-only').forEach(el => el.style.display = '');
-      }
+      const cached = Auth.getUser();
+      // 合并：保留缓存中的最新状态，避免 API 读到 WebSocket 还没连上的值
+      const merged = { ...u, status: cached?.status ?? u.status };
+      Auth.setUser(merged);
+      renderMyProfile(merged);
     }
   }
+  loadMyProfile();
   loadMyProfile();
 
   lucide.createIcons();
@@ -584,6 +594,18 @@
 
   WebSocketManager.onStatusChange((data) => {
     ConversationManager.updateOnlineStatus(data.userId, data.status);
+    // 更新自己的状态指示点
+    const myId = Auth.getUserId();
+    if (data.userId === myId) {
+      const dot = document.getElementById('myStatus');
+      if (dot) {
+        dot.className = 'status-indicator';
+        if (data.status === 1) dot.classList.add('online');
+        else if (data.status === 2) dot.classList.add('busy');
+        else if (data.status === 3) dot.classList.add('dnd');
+      }
+      Auth.setUser({ ...Auth.getUser(), status: data.status });
+    }
   });
 
   // 群聊消息监听

@@ -17,5 +17,4 @@ jobs:
           script: |
             cd ~/ncu-web-homework
             git pull
-            bash db/migrate.sh
             docker compose up -d --build

@@ -9,9 +9,11 @@ $DB_NAME = if ($env:DB_NAME) { $env:DB_NAME } else { "chat_system" }
 $SCRIPT_DIR = Split-Path -Parent $MyInvocation.MyCommand.Path
 $MIGRATION_DIR = Join-Path $SCRIPT_DIR "migration"
 
+$CHARSET_OPTS = "--default-character-set=utf8mb4"
+
 function Invoke-MySQL {
     param([string]$Query, [string]$Database)
-    $args = @("-h$DB_HOST", "-P$DB_PORT", "-u$DB_USER", "-p$DB_PASS")
+    $args = @($CHARSET_OPTS, "-h$DB_HOST", "-P$DB_PORT", "-u$DB_USER", "-p$DB_PASS")
     if ($Database) { $args += $Database }
     $args += "-e", $Query
     mysql @args
@@ -27,7 +29,7 @@ $count = 0
 Get-ChildItem -Path $MIGRATION_DIR -Filter "*.sql" | Sort-Object Name | ForEach-Object {
     Write-Host "   -> $($_.Name)"
     $content = Get-Content $_.FullName -Raw
-    $content | mysql -h$DB_HOST -P$DB_PORT -u$DB_USER -p$DB_PASS $DB_NAME
+    $content | mysql $CHARSET_OPTS -h$DB_HOST -P$DB_PORT -u$DB_USER -p$DB_PASS $DB_NAME
     $count++
 }
 

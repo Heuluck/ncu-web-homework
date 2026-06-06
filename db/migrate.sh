@@ -10,11 +10,13 @@ DB_NAME=${DB_NAME:-chat_system}
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 MIGRATION_DIR="$SCRIPT_DIR/migration"
 
+CHARSET_OPTS="--default-character-set=utf8mb4"
+
 mysql_cmd() {
     if [ -z "$DB_PASS" ]; then
-        mysql -u"$DB_USER" "$@"
+        mysql $CHARSET_OPTS -u"$DB_USER" "$@"
     else
-        mysql -h"$DB_HOST" -P"$DB_PORT" -u"$DB_USER" -p"$DB_PASS" "$@"
+        mysql $CHARSET_OPTS -h"$DB_HOST" -P"$DB_PORT" -u"$DB_USER" -p"$DB_PASS" "$@"
     fi
 }
 

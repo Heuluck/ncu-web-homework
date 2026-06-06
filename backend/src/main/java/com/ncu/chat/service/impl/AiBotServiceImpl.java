@@ -251,7 +251,7 @@ public class AiBotServiceImpl implements AiBotService {
                         }
                         continue;
                     }
-                    callAiAndReply(groupId, bot, userMessage, senderName);
+                    callAiAndReply(groupId, bot, userMessage, senderId, senderName);
                 }
             }
         } catch (Exception e) {
@@ -260,7 +260,7 @@ public class AiBotServiceImpl implements AiBotService {
     }
 
     @Override
-    public void callAiAndReply(Long groupId, AiBot bot, String userMessage, String senderName) {
+    public void callAiAndReply(Long groupId, AiBot bot, String userMessage, Long senderId, String senderName) {
         try {
             String apiKey = cryptoUtil.decrypt(bot.getApiKeyEncrypted());
 
@@ -312,20 +312,22 @@ public class AiBotServiceImpl implements AiBotService {
                     // 其他机器人的消息 → user（模拟为普通用户发言）
                     AiBot other = botMap.get(m.getBotId());
                     String botName = other != null ? "🤖" + other.getName() : "机器人";
+                    Long botOwnerId = other != null ? other.getOwnerId() : null;
+                    String botOwnerInfo = botOwnerId != null ? "[主人ID:" + botOwnerId + "]" : "";
                     ctx.put("role", "user");
-                    ctx.put("content", botName + " 说：" + text);
+                    ctx.put("content", botName + botOwnerInfo + " 说：" + text);
                 } else {
                     // 普通用户消息 → user
                     String name = nameMap.getOrDefault(m.getSenderId(), "用户");
                     ctx.put("role", "user");
-                    ctx.put("content", name + " 说：" + text);
+                    ctx.put("content", "[用户:" + m.getSenderId() + "] " + name + " 说：" + text);
                 }
                 messages.add(ctx);
             }
             // 当前用户消息
             Map<String, String> user = new HashMap<>();
             user.put("role", "user");
-            user.put("content", senderName + " 说：" + userMessage);
+            user.put("content", "[用户:" + senderId + "] " + senderName + " 说：" + userMessage);
             messages.add(user);
 
             // 构建请求体
@@ -425,6 +427,12 @@ public class AiBotServiceImpl implements AiBotService {
         StringBuilder sb = new StringBuilder();
         if (bot.getSystemPrompt() != null && !bot.getSystemPrompt().isBlank()) {
             sb.append(bot.getSystemPrompt()).append("\n\n");
+        }
+        // 机器人主人信息
+        User owner = userMapper.selectById(bot.getOwnerId());
+        if (owner != null) {
+            sb.append("【你的主人】").append(owner.getNickname()).append(" (ID: ").append(owner.getId()).append(")");
+            sb.append("\n注意：你的主人是 ").append(owner.getNickname()).append("，你可以称呼ta。\n\n");
         }
         // 群聊基本信息
         ChatGroup group = chatGroupMapper.selectById(groupId);

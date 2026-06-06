@@ -24,5 +24,5 @@ public interface AiBotService {
     /**
      * 调用 AI API 并在群聊中发送回复
      */
-    void callAiAndReply(Long groupId, AiBot bot, String userMessage, String senderName);
+    void callAiAndReply(Long groupId, AiBot bot, String userMessage, Long senderId, String senderName);
 }

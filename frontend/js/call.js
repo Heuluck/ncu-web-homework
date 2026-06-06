@@ -160,8 +160,14 @@ const CallManager = {
       console.log('[WebRTC] Remote track received');
       if (this.remoteAudio) this.remoteAudio.remove();
       this.remoteAudio = new Audio();
-      this.remoteAudio.autoplay = true;
+      this.remoteAudio.volume = 1;
       this.remoteAudio.srcObject = event.streams[0];
+      document.body.appendChild(this.remoteAudio);
+      // 部分浏览器需要显式 play()+用户手势才能播放音频
+      const playPromise = this.remoteAudio.play();
+      if (playPromise) {
+        playPromise.catch(e => console.warn('[WebRTC] remoteAudio.play() failed:', e));
+      }
     };
 
     // ICE 连接状态变化

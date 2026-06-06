@@ -803,6 +803,21 @@ const FriendManager = {
         }
     },
 
+    // ==================== 在线状态同步 ====================
+
+    /** WebSocket 推送状态变更时更新好友列表中对应好友的状态 */
+    updateOnlineStatus(userId, status) {
+        if (!this.groups) return;
+        for (const group of this.groups) {
+            const friend = (group.friends || []).find(f => f.friendId === userId);
+            if (friend) {
+                friend.onlineStatus = status;
+                this.renderFriendList();
+                return;
+            }
+        }
+    },
+
     // ==================== 工具 ====================
 
     _renderFriendItem(friend) {

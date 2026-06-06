@@ -331,7 +331,7 @@
             <i data-lucide="chevron-down" style="width: 16px; height: 16px;"></i>
           </button>
           <div class="dropdown-menu">
-            <div class="dropdown-item" onclick="location.href='/profile.html'">
+            <div class="dropdown-item" onclick="openProfileModal()">
               <i data-lucide="user" style="width: 16px; height: 16px;"></i>
               个人资料
             </div>
@@ -543,6 +543,74 @@
   </div>
 </div>
 
+<!-- 个人资料模态框（取代独立页面，共享 WebSocket 避免断开导致离线） -->
+<div id="profileModal" class="modal-overlay" style="display:none;">
+  <div class="modal-container" style="max-width: 480px; max-height: 90vh; overflow-y: auto;">
+    <div class="modal-header">
+      <h3>个人资料</h3>
+      <button class="btn-icon" onclick="closeProfileModal()">
+        <i data-lucide="x"></i>
+      </button>
+    </div>
+    <div class="modal-body">
+      <!-- 头像 -->
+      <div class="profile-avatar-section" style="margin-bottom: var(--space-6);">
+        <div class="profile-avatar-wrapper" onclick="document.getElementById('pmAvatarInput').click()">
+          <img id="pmAvatar" src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix" alt="头像" class="avatar avatar-xl">
+          <span id="pmStatusDot" class="status-indicator online" style="width:16px;height:16px;bottom:4px;right:4px;"></span>
+          <div class="profile-avatar-overlay">
+            <i data-lucide="camera" style="width: 24px; height: 24px;"></i>
+          </div>
+        </div>
+        <input type="file" id="pmAvatarInput" accept="image/*" style="display:none;" onchange="uploadProfileAvatar(this)">
+        <span class="text-muted text-sm">点击更换头像</span>
+      </div>
+
+      <!-- 资料表单 -->
+      <form id="pmForm" class="profile-form" onsubmit="saveProfile(event)">
+        <div class="input-group">
+          <label class="input-label">用户名</label>
+          <input type="text" id="pmUsername" class="input-control" disabled>
+        </div>
+        <div class="input-group">
+          <label class="input-label">昵称</label>
+          <input type="text" id="pmNickname" class="input-control" placeholder="设置昵称">
+        </div>
+        <div class="input-group">
+          <label class="input-label">个性签名</label>
+          <input type="text" id="pmSignature" class="input-control" placeholder="写点什么...">
+        </div>
+        <div class="input-group">
+          <label class="input-label">在线状态</label>
+          <select id="pmStatus" class="input-control" autocomplete="off" onchange="updateProfileStatusDot(parseInt(this.value))">
+            <option value="1">在线</option>
+            <option value="2">忙碌</option>
+            <option value="3">勿扰</option>
+            <option value="0">离线</option>
+          </select>
+        </div>
+        <button type="submit" class="btn btn-primary">保存修改</button>
+      </form>
+
+      <!-- 修改密码 -->
+      <div class="profile-section" style="margin-top: var(--space-6);">
+        <h3 class="profile-section-title">修改密码</h3>
+        <form id="pmPasswordForm" onsubmit="changeProfilePassword(event)" style="display:flex;flex-direction:column;gap:var(--space-4);">
+          <div class="input-group">
+            <label class="input-label">原密码</label>
+            <input type="password" id="pmOldPassword" class="input-control" placeholder="输入原密码" required>
+          </div>
+          <div class="input-group">
+            <label class="input-label">新密码</label>
+            <input type="password" id="pmNewPassword" class="input-control" placeholder="至少6位，包含字母和数字" required>
+          </div>
+          <button type="submit" class="btn btn-secondary">修改密码</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- SockJS + STOMP.js CDN -->
 <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
@@ -580,6 +648,7 @@
       if (u.status === 1) statusDot.classList.add('online');
       else if (u.status === 2) statusDot.classList.add('busy');
       else if (u.status === 3) statusDot.classList.add('dnd');
+      // 状态 0 无需额外类名，默认为灰色离线点
     }
     if (u?.role === 1) {
       document.querySelectorAll('.admin-only').forEach(el => el.style.display = '');
@@ -614,8 +683,13 @@
   });
 
   WebSocketManager.onStatusChange((data) => {
+    // 1. 更新会话列表缓存（ConversationManager）
     ConversationManager.updateOnlineStatus(data.userId, data.status);
-    // 更新自己的状态指示点
+    // 2. 更新好友列表缓存（FriendManager），确保聊天头部能读到最新状态
+    if (typeof FriendManager !== 'undefined') {
+      FriendManager.updateOnlineStatus(data.userId, data.status);
+    }
+    // 3. 更新自己的状态指示点
     const myId = Auth.getUserId();
     if (data.userId === myId) {
       const dot = document.getElementById('myStatus');
@@ -626,6 +700,12 @@
         else if (data.status === 3) dot.classList.add('dnd');
       }
       Auth.setUser({ ...Auth.getUser(), status: data.status });
+      // 如果个人资料模态框打开中，同步更新
+      const pmStatus = document.getElementById('pmStatus');
+      if (pmStatus && document.getElementById('profileModal').style.display !== 'none') {
+        pmStatus.value = data.status;
+        updateProfileStatusDot(data.status);
+      }
     }
   });
 
@@ -661,6 +741,143 @@
   });
 
   WebSocketManager.connect();
+
+  // WebSocket 断开时，立即将所有状态切为离线（仅改 DOM，不污染 Auth 缓存）
+  WebSocketManager.onDisconnected(() => {
+    // 1. 自己的状态指示器
+    const dot = document.getElementById('myStatus');
+    if (dot) dot.className = 'status-indicator offline';
+    // 2. 所有好友列表状态 → 离线
+    if (typeof FriendManager !== 'undefined' && FriendManager.groups) {
+      for (const group of FriendManager.groups) {
+        for (const friend of (group.friends || [])) {
+          friend.onlineStatus = 0;
+        }
+      }
+      FriendManager.renderFriendList();
+    }
+    // 3. 所有私聊会话状态 → 离线
+    ConversationManager.conversations.forEach(c => {
+      if (c._type === 'private') c.onlineStatus = 0;
+    });
+    ConversationManager.renderList();
+    // 4. 如果正在私聊，刷新聊天头部状态
+    if (ChatManager.currentFriendId && ChatManager.currentFriendInfo) {
+      ChatManager.currentFriendInfo.onlineStatus = 0;
+      ChatManager._renderHeader();
+    }
+  });
+
+  // ===== 个人资料模态框（共享 WebSocket，不再跳独立页面导致断开） =====
+  let _pmCurrentAvatar = '';
+
+  function openProfileModal() {
+    const modal = document.getElementById('profileModal');
+    if (!modal) return;
+    modal.style.display = 'flex';
+    document.querySelectorAll('.dropdown').forEach(d => d.classList.remove('active'));
+    _loadProfileModalData();
+    lucide.createIcons({ nodes: [modal] });
+  }
+
+  function closeProfileModal() {
+    document.getElementById('profileModal').style.display = 'none';
+  }
+
+  // 点击遮罩关闭
+  document.getElementById('profileModal')?.addEventListener('click', function(e) {
+    if (e.target === this) closeProfileModal();
+  });
+
+  async function _loadProfileModalData() {
+    // 先用缓存数据快速填充
+    const cached = Auth.getUser();
+    if (cached) {
+      document.getElementById('pmNickname').value = cached.nickname || '';
+      document.getElementById('pmSignature').value = cached.signature || '';
+      document.getElementById('pmStatus').value = cached.status ?? 1;
+      updateProfileStatusDot(cached.status ?? 1);
+      if (cached.avatar) {
+        document.getElementById('pmAvatar').src = cached.avatar;
+        _pmCurrentAvatar = cached.avatar;
+      }
+    }
+
+    // 再从 API 获取最新数据
+    const result = await API.get('/api/user/profile');
+    if (result && result.code === 200) {
+      const user = result.data;
+      document.getElementById('pmUsername').value = user.username;
+      document.getElementById('pmNickname').value = user.nickname || '';
+      document.getElementById('pmSignature').value = user.signature || '';
+      document.getElementById('pmStatus').value = user.status ?? 1;
+      updateProfileStatusDot(user.status ?? 1);
+      if (user.avatar) {
+        document.getElementById('pmAvatar').src = user.avatar;
+        _pmCurrentAvatar = user.avatar;
+      }
+    }
+  }
+
+  function updateProfileStatusDot(status) {
+    const dot = document.getElementById('pmStatusDot');
+    if (!dot) return;
+    dot.className = 'status-indicator';
+    if (status === 1) dot.classList.add('online');
+    else if (status === 2) dot.classList.add('busy');
+    else if (status === 3) dot.classList.add('dnd');
+  }
+
+  async function uploadProfileAvatar(input) {
+    const file = input.files[0];
+    if (!file) return;
+    const result = await API.upload(file);
+    if (result && result.code === 200) {
+      _pmCurrentAvatar = result.data.url;
+      document.getElementById('pmAvatar').src = _pmCurrentAvatar;
+    }
+  }
+
+  async function saveProfile(e) {
+    e.preventDefault();
+    const status = parseInt(document.getElementById('pmStatus').value);
+    const result = await API.put('/api/user/profile', {
+      nickname: document.getElementById('pmNickname').value,
+      signature: document.getElementById('pmSignature').value,
+      avatar: _pmCurrentAvatar,
+      status: status
+    });
+    if (result && result.code === 200) {
+      Auth.setUser(result.data);
+      renderMyProfile(result.data);
+      updateProfileStatusDot(status);
+      Utils.showToast('保存成功', 'success');
+    } else {
+      Utils.showToast(result?.message || '保存失败', 'error');
+    }
+  }
+
+  async function changeProfilePassword(e) {
+    e.preventDefault();
+    const oldPwd = document.getElementById('pmOldPassword').value;
+    const newPwd = document.getElementById('pmNewPassword').value;
+    const result = await API.put('/api/user/password', { oldPassword: oldPwd, newPassword: newPwd });
+    if (result && result.code === 200) {
+      Utils.showToast('密码修改成功', 'success');
+      document.getElementById('pmOldPassword').value = '';
+      document.getElementById('pmNewPassword').value = '';
+    } else {
+      Utils.showToast(result?.message || '修改失败', 'error');
+    }
+  }
+
+  // WebSocket 断开时同步更新模态框
+  WebSocketManager.onDisconnected(() => {
+    const pmStatus = document.getElementById('pmStatus');
+    if (pmStatus) pmStatus.value = 0;
+    updateProfileStatusDot(0);
+  });
+
   ConversationManager.loadConversations();
   // 启动时加载好友数据（供聊天头部菜单使用）+ 检查待处理申请
   if (typeof FriendManager !== 'undefined') {

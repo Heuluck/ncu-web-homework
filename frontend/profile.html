@@ -51,7 +51,7 @@
 
         <div class="input-group">
           <label class="input-label">在线状态</label>
-          <select id="status" class="input-control">
+          <select id="status" class="input-control" autocomplete="off">
             <option value="1">在线</option>
             <option value="2">忙碌</option>
             <option value="3">勿扰</option>
@@ -93,14 +93,24 @@
     
     // 加载个人信息
     async function loadProfile() {
+      // 先用缓存数据快速填充，防止 API 返回前显示错误默认值
+      const cached = Auth.getUser();
+      if (cached) {
+        document.getElementById('nickname').value = cached.nickname || '';
+        document.getElementById('signature').value = cached.signature || '';
+        document.getElementById('status').value = cached.status ?? 1;
+        updateStatusIndicator(cached.status ?? 1);
+        if (cached.avatar) document.getElementById('avatarPreview').src = cached.avatar;
+      }
+
       const result = await API.get('/api/user/profile');
       if (result && result.code === 200) {
         const user = result.data;
         document.getElementById('username').value = user.username;
         document.getElementById('nickname').value = user.nickname || '';
         document.getElementById('signature').value = user.signature || '';
-        document.getElementById('status').value = user.status;
-        updateStatusIndicator(user.status);
+        document.getElementById('status').value = user.status ?? 1;
+        updateStatusIndicator(user.status ?? 1);
         if (user.avatar) {
           document.getElementById('avatarPreview').src = user.avatar;
           currentAvatar = user.avatar;
@@ -111,8 +121,8 @@
     // WebSocket 状态变化时同步到表单
     WebSocketManager.onStatusChange((data) => {
       if (data.userId === currentUserId) {
-        document.getElementById('status').value = data.status;
-        updateStatusIndicator(data.status);
+        document.getElementById('status').value = data.status ?? 1;
+        updateStatusIndicator(data.status ?? 1);
       }
     });
     
@@ -174,6 +184,7 @@
         if (status === 1) dot.classList.add('online');
         else if (status === 2) dot.classList.add('busy');
         else if (status === 3) dot.classList.add('dnd');
+        // status === 0 或 undefined：无额外类名，默认灰色离线点
       }
     }
     
@@ -185,6 +196,12 @@
     lucide.createIcons();
     loadProfile();
     WebSocketManager.connect();
+
+    // WebSocket 断开时，状态指示器和下拉框都切为离线
+    WebSocketManager.onDisconnected(() => {
+      document.getElementById('status').value = 0;
+      updateStatusIndicator(0);
+    });
   </script>
 </body>
 </html>

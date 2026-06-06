@@ -13,6 +13,7 @@ import com.ncu.chat.model.entity.User;
 import com.ncu.chat.service.UserService;
 import com.ncu.chat.util.JwtUtil;
 import org.springframework.beans.BeanUtils;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -26,12 +27,15 @@ public class UserServiceImpl implements UserService {
     private final UserMapper userMapper;
     private final JwtUtil jwtUtil;
     private final FriendGroupMapper friendGroupMapper;
+    private final SimpMessagingTemplate messagingTemplate;
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
-    public UserServiceImpl(UserMapper userMapper, JwtUtil jwtUtil, FriendGroupMapper friendGroupMapper) {
+    public UserServiceImpl(UserMapper userMapper, JwtUtil jwtUtil, FriendGroupMapper friendGroupMapper,
+                           SimpMessagingTemplate messagingTemplate) {
         this.userMapper = userMapper;
         this.jwtUtil = jwtUtil;
         this.friendGroupMapper = friendGroupMapper;
+        this.messagingTemplate = messagingTemplate;
     }
 
     @Override
@@ -51,7 +55,7 @@ public class UserServiceImpl implements UserService {
         user.setPassword(passwordEncoder.encode(dto.getPassword()));
         user.setNickname(dto.getNickname());
         user.setAvatar(dto.getAvatar());
-        user.setStatus(0);
+        user.setStatus(1);
         user.setRole(0);
         user.setEnabled(1);
         user.setDeleted(0);
@@ -114,11 +118,22 @@ public class UserServiceImpl implements UserService {
         if (user == null) {
             throw new BusinessException("用户不存在");
         }
+        Integer oldStatus = user.getStatus();
         if (dto.getNickname() != null) user.setNickname(dto.getNickname());
         if (dto.getAvatar() != null) user.setAvatar(dto.getAvatar());
         if (dto.getSignature() != null) user.setSignature(dto.getSignature());
         if (dto.getStatus() != null) user.setStatus(dto.getStatus());
         userMapper.updateById(user);
+
+        // 状态变更时通过 WebSocket 实时广播给所有在线用户
+        if (dto.getStatus() != null && !dto.getStatus().equals(oldStatus)) {
+            Map<String, Object> statusMsg = new HashMap<>();
+            statusMsg.put("type", "STATUS_CHANGE");
+            statusMsg.put("userId", userId);
+            statusMsg.put("status", dto.getStatus());
+            statusMsg.put("timestamp", LocalDateTime.now().toString());
+            messagingTemplate.convertAndSend("/topic/status", statusMsg);
+        }
         return convertToProfile(user);
     }
 

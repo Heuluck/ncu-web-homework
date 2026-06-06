@@ -81,7 +81,7 @@ const Utils = {
       2: '忙碌',
       3: '勿扰'
     };
-    return statusMap[status] || '离线';
+    return statusMap[status] ?? '在线';
   },
 
   /**
@@ -96,7 +96,7 @@ const Utils = {
       2: 'busy',
       3: 'dnd'
     };
-    return classMap[status] || 'offline';
+    return classMap[status] ?? 'online';
   },
 
   /**
@@ -108,7 +108,7 @@ const Utils = {
     const container = document.getElementById('toastContainer') || (() => {
       const el = document.createElement('div');
       el.id = 'toastContainer';
-      el.style.cssText = 'position:fixed;top:20px;right:20px;z-index:100002;display:flex;flex-direction:column;gap:8px;pointer-events:none;';
+      el.style.cssText = 'position:fixed;top:120px;right:20px;z-index:100002;display:flex;flex-direction:column;gap:8px;pointer-events:none;';
       document.body.appendChild(el);
       return el;
     })();

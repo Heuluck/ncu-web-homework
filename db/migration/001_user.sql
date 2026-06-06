@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS `user` (
     `nickname` VARCHAR(50) NOT NULL,
     `avatar` VARCHAR(255) DEFAULT NULL,
     `signature` VARCHAR(255) DEFAULT NULL,
-    `status` TINYINT DEFAULT 0 COMMENT '0-离线 1-在线 2-忙碌 3-勿扰',
+    `status` TINYINT DEFAULT 1 COMMENT '0-离线 1-在线 2-忙碌 3-勿扰',
     `role` TINYINT DEFAULT 0 COMMENT '0-普通用户 1-管理员',
     `enabled` TINYINT DEFAULT 1 COMMENT '0-禁用 1-启用',
     `deleted` TINYINT DEFAULT 0,

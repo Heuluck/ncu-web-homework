@@ -66,6 +66,7 @@ const ChatManager = {
     document.getElementById('chatName').innerHTML = nameHtml;
 
     const statusEl = document.getElementById('chatStatus');
+    statusEl.style.display = '';
     statusEl.className = `status-indicator ${Utils.getStatusClass(info.onlineStatus)}`;
     document.getElementById('chatStatusText').textContent = Utils.getStatusText(info.onlineStatus);
   },
@@ -88,6 +89,7 @@ const ChatManager = {
     if (!this.currentFriendInfo) return;
     this.currentFriendInfo.onlineStatus = status;
     const statusEl = document.getElementById('chatStatus');
+    statusEl.style.display = '';
     statusEl.className = `status-indicator ${Utils.getStatusClass(status)}`;
     document.getElementById('chatStatusText').textContent = Utils.getStatusText(status);
   },

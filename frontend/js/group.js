@@ -154,6 +154,7 @@ const GroupManager = {
             letterEl.textContent = (this.currentGroupInfo.name || '?')[0];
         }
         document.getElementById('chatName').textContent = this.currentGroupInfo.name;
+        document.getElementById('chatStatus').style.display = 'none';
         document.getElementById('chatStatusText').textContent = `${this.currentGroupInfo.memberCount || 0} 人`;
     },
 

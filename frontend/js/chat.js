@@ -164,7 +164,7 @@ const ChatManager = {
     }
 
     lucide.createIcons();
-    if (scrollBottom) this.scrollToBottom();
+    if (scrollBottom) this._scrollAfterImages(messagesEl);
   },
 
   _prependMessages(messages) {
@@ -428,8 +428,23 @@ const ChatManager = {
 
   scrollToBottom() {
     const messagesEl = document.getElementById('chatMessages');
+    if (!messagesEl) return;
     requestAnimationFrame(() => {
       messagesEl.scrollTop = messagesEl.scrollHeight;
+    });
+  },
+
+  /**
+   * 先立即滚底，再监听每张图片加载完成后修正位置
+   */
+  _scrollAfterImages(container) {
+    this.scrollToBottom();
+    const images = container.querySelectorAll('.message-image');
+    images.forEach(img => {
+      if (img.complete) return;
+      const onDone = () => this.scrollToBottom();
+      img.addEventListener('load', onDone, { once: true });
+      img.addEventListener('error', onDone, { once: true });
     });
   },
 

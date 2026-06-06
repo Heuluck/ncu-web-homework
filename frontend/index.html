@@ -1372,6 +1372,15 @@
     pasteImagePreview.src = '';
     pendingPasteFile = null;
   }
+
+  // 粘贴图片模态框支持 Enter 发送（在 document 层捕获，优先于输入框的 Enter）
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey && !e.isComposing && pasteImageModal.style.display === 'flex') {
+      e.preventDefault();
+      e.stopPropagation();
+      pasteImageConfirm.click();
+    }
+  }, true); // 捕获阶段，确保在 messageInput 的 keydown 之前拦截
 </script>
 </body>
 </html>

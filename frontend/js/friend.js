@@ -623,8 +623,8 @@ const FriendManager = {
         }
         const user = res.data;
         const avatarSrc = Utils.getAvatarUrl(user.avatar, `user-${user.id}`);
-        const statusText = Utils.getStatusText(user.onlineStatus);
-        const statusClass = Utils.getStatusClass(user.onlineStatus);
+        const statusText = Utils.getStatusText(user.status);
+        const statusClass = Utils.getStatusClass(user.status);
 
         const overlay = document.createElement('div');
         overlay.className = 'modal-overlay';

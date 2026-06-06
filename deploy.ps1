@@ -8,7 +8,14 @@ docker compose up -d --build
 Write-Host "2. 等待 MySQL 就绪..."
 Start-Sleep -Seconds 30
 
-Write-Host "3. 检查服务状态..."
+Write-Host "3. 执行数据库迁移..."
+if (Test-Path ".\db\migrate.ps1") {
+  & ".\db\migrate.ps1"
+} else {
+  Write-Host "  [WARN] db/migrate.ps1 not found, skipping migration" -ForegroundColor Yellow
+}
+
+Write-Host "4. 检查服务状态..."
 docker compose ps
 
 Write-Host ""

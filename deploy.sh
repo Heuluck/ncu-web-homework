@@ -9,7 +9,14 @@ docker-compose up -d --build
 echo "2. 等待 MySQL 就绪..."
 sleep 30
 
-echo "3. 检查服务状态..."
+echo "3. 执行数据库迁移..."
+if [ -f "./db/migrate.sh" ]; then
+  bash ./db/migrate.sh
+else
+  echo "  [WARN] db/migrate.sh not found, skipping migration"
+fi
+
+echo "4. 检查服务状态..."
 docker-compose ps
 
 echo ""

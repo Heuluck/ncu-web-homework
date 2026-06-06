@@ -1,7 +1,6 @@
 USE chat_system;
 
 -- 表情表
-DROP TABLE IF EXISTS `emoji`;
 CREATE TABLE IF NOT EXISTS `emoji` (
     `id` BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '主键 ID',
     `name` VARCHAR(50) CHARACTER SET utf8mb4 NOT NULL COMMENT '表情名称',

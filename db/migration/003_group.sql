@@ -1,3 +1,5 @@
+USE chat_system;
+
 -- 1. 群聊表
 CREATE TABLE IF NOT EXISTS `chat_group` (
                                             `id` BIGINT AUTO_INCREMENT PRIMARY KEY,

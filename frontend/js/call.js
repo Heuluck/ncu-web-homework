@@ -63,6 +63,11 @@ const CallManager = {
   pc: null,
   localStream: null,
   remoteAudio: null,
+  // Volume visualization
+  _volCtx: null,
+  _micAnalyser: null,
+  _speakerAnalyser: null,
+  _volRaf: null,
 
   /** STUN/TURN 服务器配置 — 优先使用自建 coturn */
   RTC_CONFIG: {
@@ -105,6 +110,7 @@ const CallManager = {
     try {
       // 获取本地音频流
       this.localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+      this._createMicVisualizer(this.localStream);
 
       // 创建 PeerConnection
       await this._createPeerConnection();
@@ -155,10 +161,11 @@ const CallManager = {
       }
     };
 
-    // 远端音轨：创建 Audio 元素播放
+    // 远端音轨：创建 Audio 元素播放 + 音量分析器
     this.pc.ontrack = (event) => {
       console.log('[WebRTC] Remote track received');
       if (this.remoteAudio) this.remoteAudio.remove();
+      this._createSpeakerVisualizer(event.streams[0]);
       this.remoteAudio = new Audio();
       this.remoteAudio.volume = 1;
       this.remoteAudio.srcObject = event.streams[0];
@@ -181,6 +188,88 @@ const CallManager = {
         this._endCall('连接断开');
       }
     };
+  },
+
+  /** 确保 AudioContext 存在且处于 running 状态 */
+  _ensureVolCtx() {
+    if (!this._volCtx) {
+      this._volCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (this._volCtx.state === 'suspended') {
+      this._volCtx.resume();
+    }
+  },
+
+  /** 为本地的麦克风创建音量分析器 */
+  _createMicVisualizer(stream) {
+    if (!stream || this._micAnalyser) return;
+    this._ensureVolCtx();
+    const source = this._volCtx.createMediaStreamSource(stream);
+    this._micAnalyser = this._volCtx.createAnalyser();
+    this._micAnalyser.fftSize = 256;
+    source.connect(this._micAnalyser);
+    const gain = this._volCtx.createGain();
+    gain.gain.value = 0;
+    this._micAnalyser.connect(gain);
+    gain.connect(this._volCtx.destination);
+    this._startVolumeAnimation();
+  },
+
+  /** 为对方的扬声器（远端音频流）创建音量分析器 */
+  _createSpeakerVisualizer(stream) {
+    if (!stream || this._speakerAnalyser) return;
+    this._ensureVolCtx();
+    const source = this._volCtx.createMediaStreamSource(stream);
+    this._speakerAnalyser = this._volCtx.createAnalyser();
+    this._speakerAnalyser.fftSize = 256;
+    source.connect(this._speakerAnalyser);
+    const gain = this._volCtx.createGain();
+    gain.gain.value = 0;
+    this._speakerAnalyser.connect(gain);
+    gain.connect(this._volCtx.destination);
+    this._startVolumeAnimation();
+  },
+
+  /** 启动音量动画循环 */
+  _startVolumeAnimation() {
+    if (this._volRaf) return;
+    const animate = () => {
+      this._updateVolumeUI();
+      this._volRaf = requestAnimationFrame(animate);
+    };
+    animate();
+  },
+
+  /** 停止音量动画循环 */
+  _stopVolumeAnimation() {
+    if (this._volRaf) {
+      cancelAnimationFrame(this._volRaf);
+      this._volRaf = null;
+    }
+  },
+
+  /** 计算 AnalyserNode 的 RMS 音量（0~1） */
+  _getVolumeLevel(analyser) {
+    if (!analyser) return 0;
+    const data = new Uint8Array(analyser.frequencyBinCount);
+    analyser.getByteTimeDomainData(data);
+    let sumSquares = 0;
+    for (let i = 0; i < data.length; i++) {
+      const normalized = (data[i] - 128) / 128;
+      sumSquares += normalized * normalized;
+    }
+    const rms = Math.sqrt(sumSquares / data.length);
+    return Math.min(1, rms * 3);
+  },
+
+  /** 更新音量 UI 条 */
+  _updateVolumeUI() {
+    const micLevel = this._getVolumeLevel(this._micAnalyser);
+    const speakerLevel = this._getVolumeLevel(this._speakerAnalyser);
+    const micFill = document.getElementById('mic-vol-fill');
+    const speakerFill = document.getElementById('speaker-vol-fill');
+    if (micFill) micFill.style.width = (micLevel * 100) + '%';
+    if (speakerFill) speakerFill.style.width = (speakerLevel * 100) + '%';
   },
 
   /** 刷新缓存的 ICE 候选（在 remoteDescription 就绪后调用） */
@@ -276,6 +365,7 @@ const CallManager = {
 
     try {
       this.localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+      this._createMicVisualizer(this.localStream);
       await this._createPeerConnection();
       this.localStream.getTracks().forEach(track => this.pc.addTrack(track, this.localStream));
 
@@ -354,6 +444,7 @@ const CallManager = {
       this.callStartTime ? Math.round((Date.now() - this.callStartTime) / 1000) : 0
     );
     this._stopCallTimer();
+    this._stopVolumeAnimation();
     this.callState = 'IDLE';
 
     if (this.pc) { this.pc.close(); this.pc = null; }
@@ -362,6 +453,9 @@ const CallManager = {
       this.localStream = null;
     }
     if (this.remoteAudio) { this.remoteAudio.remove(); this.remoteAudio = null; }
+    this._micAnalyser = null;
+    this._speakerAnalyser = null;
+    if (this._volCtx) { this._volCtx.close(); this._volCtx = null; }
 
     // 立即更新 overlay 文案，移除操作按钮
     if (message) {
@@ -402,7 +496,7 @@ const CallManager = {
     } else if (mode === 'calling') {
       el.innerHTML = `<div class="call-container calling"><img class="call-avatar" src="${avatarUrl}" alt="" onerror="this.src='${Utils.getAvatarUrl(null, 'user')}'"><div class="call-name">${Utils.escapeHtml(this.partnerName)}</div><div class="call-status" id="call-status-text">正在呼叫...</div><div class="call-actions"><button class="call-btn call-btn-reject" onclick="CallManager.hangup()"><i data-lucide="phone-off"></i></button></div></div>`;
     } else if (mode === 'ongoing') {
-      el.innerHTML = `<div class="call-container ongoing"><img class="call-avatar call-avatar-ongoing" src="${avatarUrl}" alt="" onerror="this.src='${Utils.getAvatarUrl(null, 'user')}'"><div class="call-name">${Utils.escapeHtml(this.partnerName)}</div><div class="call-status" id="call-status-text" style="display:none"></div><div class="call-timer" id="call-timer">00:00</div><div class="call-actions"><button class="call-btn call-btn-mute" id="call-mute-btn" onclick="CallManager.toggleMute()"><i data-lucide="mic"></i></button><button class="call-btn call-btn-reject" onclick="CallManager.hangup()"><i data-lucide="phone-off"></i></button></div></div>`;
+      el.innerHTML = `<div class="call-container ongoing"><img class="call-avatar call-avatar-ongoing" src="${avatarUrl}" alt="" onerror="this.src='${Utils.getAvatarUrl(null, 'user')}'"><div class="call-name">${Utils.escapeHtml(this.partnerName)}</div><div class="call-status" id="call-status-text" style="display:none"></div><div class="call-timer" id="call-timer">00:00</div><div class="call-volume-row"><div class="vol-item"><i data-lucide="mic" class="vol-icon"></i><div class="vol-track"><div class="vol-fill" id="mic-vol-fill"></div></div></div><div class="vol-item"><i data-lucide="volume-2" class="vol-icon"></i><div class="vol-track"><div class="vol-fill" id="speaker-vol-fill"></div></div></div></div><div class="call-actions"><button class="call-btn call-btn-mute" id="call-mute-btn" onclick="CallManager.toggleMute()"><i data-lucide="mic"></i></button><button class="call-btn call-btn-reject" onclick="CallManager.hangup()"><i data-lucide="phone-off"></i></button></div></div>`;
     }
 
     document.body.appendChild(el);

@@ -173,22 +173,26 @@ const CallManager = {
     // ICE 连接状态变化
     this.pc.oniceconnectionstatechange = () => {
       console.log('[WebRTC] ICE state:', this.pc.iceConnectionState);
+      if (this.pc.iceConnectionState === 'connected') {
+        this._updateCallStatus('已连接');
+      }
       if (this.pc.iceConnectionState === 'disconnected' ||
           this.pc.iceConnectionState === 'failed') {
         this._endCall('连接断开');
       }
     };
+  },
 
-    // 处理 PC 创建前缓存的 ICE 候选
-    if (this.pendingIceCandidates.length > 0) {
-      const candidates = [...this.pendingIceCandidates];
-      this.pendingIceCandidates = [];
-      for (const c of candidates) {
-        try {
-          await this.pc.addIceCandidate(new RTCIceCandidate(JSON.parse(c)));
-        } catch (e) {
-          console.warn('[WebRTC] Flush pending ICE error:', e);
-        }
+  /** 刷新缓存的 ICE 候选（在 remoteDescription 就绪后调用） */
+  async _flushPendingIceCandidates() {
+    if (this.pendingIceCandidates.length === 0) return;
+    const candidates = [...this.pendingIceCandidates];
+    this.pendingIceCandidates = [];
+    for (const c of candidates) {
+      try {
+        await this.pc.addIceCandidate(new RTCIceCandidate(JSON.parse(c)));
+      } catch (e) {
+        console.warn('[WebRTC] Flush pending ICE error:', e);
       }
     }
   },
@@ -226,6 +230,7 @@ const CallManager = {
             await this.pc.setRemoteDescription(
               new RTCSessionDescription({ type: 'answer', sdp: signal.sdp })
             );
+            await this._flushPendingIceCandidates();
           } catch (e) {
             console.error('[WebRTC] setRemoteDescription error:', e);
           }
@@ -234,7 +239,7 @@ const CallManager = {
 
       case 'CALL_ICE':
         if (signal.candidate) {
-          if (this.pc) {
+          if (this.pc && this.pc.remoteDescription) {
             try {
               const candidate = JSON.parse(signal.candidate);
               await this.pc.addIceCandidate(new RTCIceCandidate(candidate));
@@ -242,9 +247,8 @@ const CallManager = {
               console.error('[WebRTC] addIceCandidate error:', e);
             }
           } else {
-            // PC 尚未创建，暂存候选等 PC 就绪后处理
             this.pendingIceCandidates.push(signal.candidate);
-            console.log('[WebRTC] ICE candidate buffered (PC not ready)');
+            console.log('[WebRTC] ICE candidate buffered (remote desc not ready)');
           }
         }
         break;
@@ -281,6 +285,7 @@ const CallManager = {
           new RTCSessionDescription({ type: 'offer', sdp: this.pendingOfferSdp })
         );
         console.log('[WebRTC] Remote description set from offer');
+        await this._flushPendingIceCandidates();
       }
 
       // 2. 创建 Answer

@@ -58,6 +58,7 @@ const CallManager = {
   callTimer: null,
   isMuted: false,
   pendingOfferSdp: null, // 暂存来电的 SDP Offer
+  pendingIceCandidates: [], // 暂存 PC 创建前到达的 ICE 候选
   // WebRTC
   pc: null,
   localStream: null,
@@ -85,10 +86,11 @@ const CallManager = {
       Utils.showToast('当前无法发起通话', 'warning');
       return;
     }
+    // 防抖：立即标记为 CALLING，避免双击/重复绑定导致双重调用
+    this.callState = 'CALLING';
     this.partnerId = userId;
     this.partnerName = userName;
     this.partnerAvatar = userAvatar;
-    this.callState = 'CALLING';
     this._showCallUI('calling');
     CallTone.startRingback();  // 呼叫方等待音
 
@@ -162,6 +164,19 @@ const CallManager = {
         this._endCall('连接断开');
       }
     };
+
+    // 处理 PC 创建前缓存的 ICE 候选
+    if (this.pendingIceCandidates.length > 0) {
+      const candidates = [...this.pendingIceCandidates];
+      this.pendingIceCandidates = [];
+      for (const c of candidates) {
+        try {
+          await this.pc.addIceCandidate(new RTCIceCandidate(JSON.parse(c)));
+        } catch (e) {
+          console.warn('[WebRTC] Flush pending ICE error:', e);
+        }
+      }
+    }
   },
 
   /**
@@ -204,12 +219,18 @@ const CallManager = {
         break;
 
       case 'CALL_ICE':
-        if (signal.candidate && this.pc) {
-          try {
-            const candidate = JSON.parse(signal.candidate);
-            await this.pc.addIceCandidate(new RTCIceCandidate(candidate));
-          } catch (e) {
-            console.error('[WebRTC] addIceCandidate error:', e);
+        if (signal.candidate) {
+          if (this.pc) {
+            try {
+              const candidate = JSON.parse(signal.candidate);
+              await this.pc.addIceCandidate(new RTCIceCandidate(candidate));
+            } catch (e) {
+              console.error('[WebRTC] addIceCandidate error:', e);
+            }
+          } else {
+            // PC 尚未创建，暂存候选等 PC 就绪后处理
+            this.pendingIceCandidates.push(signal.candidate);
+            console.log('[WebRTC] ICE candidate buffered (PC not ready)');
           }
         }
         break;
@@ -345,6 +366,8 @@ const CallManager = {
 
     this.partnerId = null;
     this.callStartTime = null;
+    this.pendingOfferSdp = null;
+    this.pendingIceCandidates = [];
   },
 
   _showCallUI(mode) {

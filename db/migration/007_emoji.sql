@@ -1,4 +1,5 @@
 USE chat_system;
+SET NAMES utf8mb4;
 
 -- 表情表
 CREATE TABLE IF NOT EXISTS `emoji` (

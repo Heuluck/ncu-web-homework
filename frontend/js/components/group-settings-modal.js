@@ -57,15 +57,9 @@ const GroupSettingsModal = {
                     if (GroupManager.currentGroupId === groupId) {
                         GroupManager.currentGroupId = null;
                         GroupManager.currentGroupInfo = null;
-                        document.getElementById('chatHeader').style.display = 'none';
-                        document.getElementById('chatInputArea').style.display = 'none';
-                        document.getElementById('chatMessages').innerHTML = `
-                            <div class="empty-state">
-                                <div class="empty-state-icon"><i data-lucide="message-square"></i></div>
-                                <div class="empty-state-title">群聊已解散</div>
-                                <div class="empty-state-text">该群聊已被解散</div>
-                            </div>`;
-                        lucide.createIcons();
+                        ChatHeaderController.showEmptyState(
+                            '<div class="empty-state"><div class="empty-state-icon"><i data-lucide="message-square"></i></div><div class="empty-state-title">群聊已解散</div><div class="empty-state-text">该群聊已被解散</div></div>'
+                        );
                     }
                     await GroupManager.loadMyGroups();
                 } else {

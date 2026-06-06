@@ -5,6 +5,9 @@ const EmojiPicker = {
   emojis: [],
   currentCategory: 'default',
   onSelectCallback: null,
+  _closeTimer: null,
+  _closeHandler: null,
+  _rendering: false,
 
   // 初始化：加载表情列表
   async init() {
@@ -22,17 +25,13 @@ const EmojiPicker = {
 
   // 获取表情 HTML
   render() {
-    if (this.emojis.length === 0) {
+    if (!this.emojis || this.emojis.length === 0) {
       return '<div class="emoji-empty">暂无表情</div>';
     }
 
     let html = '<div class="emoji-grid">';
     this.emojis.forEach(emoji => {
-      html += `
-        <div class="emoji-item" data-emoji="${emoji.url}" title="${emoji.name}">
-          <span style="font-size: 24px;">${emoji.url}</span>
-        </div>
-      `;
+      html += '<div class="emoji-item" data-emoji="' + emoji.url + '" title="' + Utils.escapeHtml(emoji.name) + '"><span style="font-size:24px;">' + emoji.url + '</span></div>';
     });
     html += '</div>';
     return html;
@@ -46,35 +45,54 @@ const EmojiPicker = {
       return;
     }
 
+    // 防止重复渲染
+    if (this._rendering) return;
+    this._rendering = true;
+
+    // 清除之前的关闭定时器和监听器
+    if (this._closeTimer) {
+      clearTimeout(this._closeTimer);
+      this._closeTimer = null;
+    }
+    if (this._closeHandler) {
+      document.removeEventListener('click', this._closeHandler);
+      this._closeHandler = null;
+    }
+
     this.onSelectCallback = onSelect;
+
+    // 先清除旧内容再渲染
+    container.innerHTML = '';
     container.innerHTML = this.render();
     container.classList.add('active');
 
-    // 绑定点击事件
-    const items = container.querySelectorAll('.emoji-item');
-    items.forEach((item, index) => {
-      item.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        const emojiChar = item.dataset.emoji;
-        const emojiName = item.title;
-        console.log('[表情] 点击表情:', emojiName, emojiChar);
-        if (onSelect) {
-          onSelect(emojiName, emojiChar);  // name, char
-        }
-        container.classList.remove('active');
-      });
-    });
+    // 使用事件委托，只绑定一次
+    container.onclick = (e) => {
+      const item = e.target.closest('.emoji-item');
+      if (!item) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const emojiChar = item.dataset.emoji;
+      const emojiName = item.title;
+      console.log('[表情] 点击表情:', emojiName, emojiChar);
+      if (onSelect) {
+        onSelect(emojiName, emojiChar);
+      }
+      container.classList.remove('active');
+      this._rendering = false;
+    };
 
     // 点击外部关闭
-    setTimeout(() => {
-      const closeHandler = (e) => {
+    this._closeTimer = setTimeout(() => {
+      this._closeHandler = (e) => {
         if (!container.contains(e.target) && !e.target.closest('#emojiBtn')) {
           container.classList.remove('active');
-          document.removeEventListener('click', closeHandler);
+          document.removeEventListener('click', this._closeHandler);
+          this._closeHandler = null;
+          this._rendering = false;
         }
       };
-      document.addEventListener('click', closeHandler);
+      document.addEventListener('click', this._closeHandler);
     }, 100);
   },
 
@@ -82,7 +100,9 @@ const EmojiPicker = {
   hide(containerId) {
     const container = document.getElementById(containerId);
     if (container) {
-      container.style.display = 'none';
+      container.classList.remove('active');
+      container.innerHTML = '';
+      this._rendering = false;
     }
   }
 };

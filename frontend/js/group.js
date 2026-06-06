@@ -96,19 +96,13 @@ const GroupManager = {
         this.currentPage = 1;
         this.hasMore = true;
 
-        // 显示群聊头部按钮
-        const membersBtn = document.getElementById('groupMembersBtn');
-        const settingsBtn = document.getElementById('groupSettingsBtn');
-        const callBtn = document.getElementById('voiceCallBtn');
-        if (membersBtn) membersBtn.style.display = 'inline-flex';
-        if (settingsBtn) settingsBtn.style.display = 'inline-flex';
-        if (callBtn) callBtn.style.display = 'none'; // 群聊隐藏语音通话
-
         const infoRes = await API.get(`/api/group/info/${groupId}`);
         if (token !== (ChatManager?._sessionToken ?? 0)) return;
         if (infoRes && infoRes.code === 200) {
             this.currentGroupInfo = infoRes.data;
-            this._renderGroupHeader();
+            // 使用 ChatHeaderController 统一管理头部渲染
+            const headerToken = ChatHeaderController.initSession('group', groupId, this.currentGroupInfo);
+            ChatHeaderController.renderGroup(headerToken);
         }
 
         // 预加载群机器人列表和成员列表（供 @提及 弹窗使用）
@@ -139,46 +133,9 @@ const GroupManager = {
     },
 
     _renderGroupHeader() {
-        if (!this.currentGroupInfo) return;
-        // 私聊活跃时不渲染群聊头部
-        if (typeof ChatManager !== 'undefined' && ChatManager.currentFriendId) return;
-        // 二次确认群聊状态未被异步切换覆盖
-        if (!this.currentGroupId) return;
-
-        // 更新更多按钮为群聊样式（机器人图标）
-        const moreBtn = document.getElementById('chatMoreBtn');
-        if (moreBtn) {
-            moreBtn.innerHTML = '<i data-lucide="bot"></i>';
-            moreBtn.title = 'AI 机器人';
-            lucide.createIcons({ nodes: [moreBtn] });
-        }
-
-        document.getElementById('chatHeader').style.display = '';
-        const avatarEl = document.getElementById('chatAvatar');
-        // 重置头像元素的 alt（清除私聊残留）
-        avatarEl.alt = this.currentGroupInfo.name || '群聊';
-        if (this.currentGroupInfo.avatar) {
-            avatarEl.src = this.currentGroupInfo.avatar;
-            avatarEl.style.display = '';
-            // 若之前无头像时创建了字母头像则移除
-            const oldLetter = avatarEl.parentElement?.querySelector('.group-letter-avatar');
-            if (oldLetter) oldLetter.remove();
-        } else {
-            // 无头像时用群名首字
-            avatarEl.style.display = 'none';
-            const wrapper = avatarEl.parentElement;
-            let letterEl = wrapper.querySelector('.group-letter-avatar');
-            if (!letterEl) {
-                letterEl = document.createElement('div');
-                letterEl.className = 'avatar avatar-md group-letter-avatar';
-                letterEl.style.cssText = 'background:var(--color-primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:600;';
-                wrapper.insertBefore(letterEl, avatarEl);
-            }
-            letterEl.textContent = (this.currentGroupInfo.name || '?')[0];
-        }
-        document.getElementById('chatName').textContent = this.currentGroupInfo.name;
-        document.getElementById('chatStatus').style.display = 'none';
-        document.getElementById('chatStatusText').textContent = `${this.currentGroupInfo.memberCount || 0} 人`;
+        // 委托给 ChatHeaderController（令牌保护由调用方 openGroupChat 保证）
+        const token = ChatManager?._sessionToken ?? 0;
+        ChatHeaderController.renderGroup(token);
     },
 
     async loadGroupMessages(groupId, pageNum, replace = false) {
@@ -451,14 +408,9 @@ const GroupManager = {
             if (this.currentGroupId === data.groupId) {
                 this.currentGroupId = null;
                 this.currentGroupInfo = null;
-                document.getElementById('chatHeader').style.display = 'none';
-                document.getElementById('chatInputArea').style.display = 'none';
-                document.getElementById('chatMessages').innerHTML = `
-                    <div class="empty-state">
-                        <div class="empty-state-icon"><i data-lucide="message-square"></i></div>
-                        <div class="empty-state-title">群聊已解散</div>
-                    </div>`;
-                lucide.createIcons();
+                ChatHeaderController.showEmptyState(
+                    '<div class="empty-state"><div class="empty-state-icon"><i data-lucide="message-square"></i></div><div class="empty-state-title">群聊已解散</div></div>'
+                );
             }
             // 从列表移除并刷新
             this.groups = this.groups.filter(g => g.groupId !== data.groupId);
@@ -481,14 +433,9 @@ const GroupManager = {
                 if (this.currentGroupId === data.groupId) {
                     this.currentGroupId = null;
                     this.currentGroupInfo = null;
-                    document.getElementById('chatHeader').style.display = 'none';
-                    document.getElementById('chatInputArea').style.display = 'none';
-                    document.getElementById('chatMessages').innerHTML = `
-                        <div class="empty-state">
-                            <div class="empty-state-icon"><i data-lucide="message-square"></i></div>
-                            <div class="empty-state-title">你已被移出该群聊</div>
-                        </div>`;
-                    lucide.createIcons();
+                    ChatHeaderController.showEmptyState(
+                        '<div class="empty-state"><div class="empty-state-icon"><i data-lucide="message-square"></i></div><div class="empty-state-title">你已被移出该群聊</div></div>'
+                    );
                 }
                 this.groups = this.groups.filter(g => g.groupId !== data.groupId);
                 this.renderGroupList();
@@ -519,7 +466,7 @@ const GroupManager = {
                 // 更新群人数
                 if (this.currentGroupInfo) {
                     this.currentGroupInfo.memberCount = data.memberCount || this.members.length;
-                    document.getElementById('chatStatusText').textContent = `${this.currentGroupInfo.memberCount} 人`;
+                    ChatHeaderController.updateGroupMemberCount(data.groupId, this.currentGroupInfo.memberCount);
                 }
                 // 刷新成员面板（如果打开的话）
                 const memberModal = document.getElementById('groupMemberPanelModal');
@@ -540,7 +487,7 @@ const GroupManager = {
                 // 更新群人数
                 if (this.currentGroupInfo) {
                     this.currentGroupInfo.memberCount = data.memberCount || this.members.length;
-                    document.getElementById('chatStatusText').textContent = `${this.currentGroupInfo.memberCount} 人`;
+                    ChatHeaderController.updateGroupMemberCount(data.groupId, this.currentGroupInfo.memberCount);
                 }
                 // 刷新成员面板（如果打开的话）
                 const memberModal = document.getElementById('groupMemberPanelModal');

@@ -136,10 +136,6 @@ const FriendManager = {
                 }
                 GroupManager.currentGroupId = null;
                 GroupManager.currentGroupInfo = null;
-                const membersBtn = document.getElementById('groupMembersBtn');
-                const settingsBtn = document.getElementById('groupSettingsBtn');
-                if (membersBtn) membersBtn.style.display = 'none';
-                if (settingsBtn) settingsBtn.style.display = 'none';
                 ChatManager.openChat(friendId, fallbackInfo);
                 document.querySelector('.nav-item[data-tab="recent"]')?.click();
             });
@@ -464,10 +460,6 @@ const FriendManager = {
             }
             GroupManager.currentGroupId = null;
             GroupManager.currentGroupInfo = null;
-            const membersBtn = document.getElementById('groupMembersBtn');
-            const settingsBtn = document.getElementById('groupSettingsBtn');
-            if (membersBtn) membersBtn.style.display = 'none';
-            if (settingsBtn) settingsBtn.style.display = 'none';
             ChatManager.openChat(this.currentContextFriendId, fallbackInfo);
             document.querySelector('.nav-item[data-tab="recent"]')?.click();
         }
@@ -502,7 +494,7 @@ const FriendManager = {
                     const f = (group.friends || []).find(x => x.friendId === ChatManager.currentFriendInfo.friendId);
                     if (f) { ChatManager.currentFriendInfo.blockStatus = f.blockStatus; break; }
                 }
-                ChatManager._renderHeader();
+                ChatHeaderController.refreshBlockStatus(ChatManager.currentFriendId, ChatManager.currentFriendInfo.blockStatus);
                 ChatManager._updateInputState();
             }
             this.loadFriends();
@@ -530,7 +522,7 @@ const FriendManager = {
                     const f = (group.friends || []).find(x => x.friendId === ChatManager.currentFriendInfo.friendId);
                     if (f) { ChatManager.currentFriendInfo.blockStatus = f.blockStatus; break; }
                 }
-                ChatManager._renderHeader();
+                ChatHeaderController.refreshBlockStatus(ChatManager.currentFriendId, ChatManager.currentFriendInfo.blockStatus);
                 ChatManager._updateInputState();
             }
             this.loadFriends();
@@ -548,10 +540,9 @@ const FriendManager = {
             Utils.showToast('已删除好友', 'success');
             ChatManager.currentFriendId = null;
             ChatManager.currentFriendInfo = null;
-            document.getElementById('chatHeader').style.display = 'none';
-            document.getElementById('chatInputArea').style.display = 'none';
-            document.getElementById('chatMessages').innerHTML = '<div class="empty-state"><div class="empty-state-icon"><i data-lucide="message-square" style="width:64px;height:64px;"></i></div><div class="empty-state-title">选择一个会话开始聊天</div></div>';
-            lucide.createIcons();
+            ChatHeaderController.showEmptyState(
+                '<div class="empty-state"><div class="empty-state-icon"><i data-lucide="message-square" style="width:64px;height:64px;"></i></div><div class="empty-state-title">选择一个会话开始聊天</div></div>'
+            );
             this.loadFriends();
             ConversationManager.loadConversations();
         } else {
@@ -915,7 +906,7 @@ const FriendManager = {
                 const f = (group.friends || []).find(x => x.friendId === ChatManager.currentFriendInfo.friendId);
                 if (f) {
                     ChatManager.currentFriendInfo.blockStatus = f.blockStatus;
-                    ChatManager._renderHeader();
+                    ChatHeaderController.refreshBlockStatus(ChatManager.currentFriendId, f.blockStatus);
                     ChatManager._updateInputState();
                     break;
                 }

@@ -81,9 +81,11 @@ const ChatManager = {
     // 从权威来源获取好友信息（不再直接从混合了群聊的 conversations 列表取）
     this.currentFriendInfo = this._getFriendInfo(friendId, fallbackInfo);
 
-    if (token === this._sessionToken) this._renderHeader();
+    // 使用 ChatHeaderController 统一管理头部渲染
+    const headerToken = ChatHeaderController.initSession('private', friendId, this.currentFriendInfo);
+    if (token === this._sessionToken) ChatHeaderController.renderPrivate(headerToken);
     if (token === this._sessionToken) this._updateInputState();
-    document.getElementById('chatInputArea').style.display = '';
+    ChatHeaderController.showInputArea();
 
     const messagesEl = document.getElementById('chatMessages');
     messagesEl.innerHTML = '<div class="chat-loading"><div class="spinner"></div></div>';
@@ -96,39 +98,8 @@ const ChatManager = {
   },
 
   _renderHeader() {
-    const info = this.currentFriendInfo;
-    if (!info) return;
-    // 防御：当前无活跃私聊或群聊活跃时，不渲染私聊头部
-    if (!this.currentFriendId) return;
-    if (typeof GroupManager !== 'undefined' && GroupManager.currentGroupId) return;
-
-    // 更新更多按钮为私聊样式
-    const moreBtn = document.getElementById('chatMoreBtn');
-    if (moreBtn) {
-      moreBtn.innerHTML = '<i data-lucide="more-vertical"></i>';
-      moreBtn.title = '更多';
-      lucide.createIcons({ nodes: [moreBtn] });
-    }
-
-    document.getElementById('chatHeader').style.display = '';
-    const avatarEl = document.getElementById('chatAvatar');
-    avatarEl.src = Utils.getAvatarUrl(info.avatar, `user-${info.friendId}`);
-    avatarEl.alt = info.nickname;
-    avatarEl.style.display = ''; // 恢复显示（群聊可能隐藏了）
-    // 移除群聊字母头像
-    const letterAvatar = avatarEl.parentElement?.querySelector('.group-letter-avatar');
-    if (letterAvatar) letterAvatar.remove();
-
-    let nameHtml = Utils.escapeHtml(info.nickname || '');
-    if (info.blockStatus === 'blocked_by_me') nameHtml += ' <span style="color:var(--color-danger);font-size:12px;">(已拉黑)</span>';
-    else if (info.blockStatus === 'blocked_by_them') nameHtml += ' <span style="color:var(--color-warning);font-size:12px;">(被拉黑)</span>';
-    else if (info.blockStatus === 'both') nameHtml += ' <span style="color:var(--color-danger);font-size:12px;">(互相拉黑)</span>';
-    document.getElementById('chatName').innerHTML = nameHtml;
-
-    const statusEl = document.getElementById('chatStatus');
-    statusEl.style.display = '';
-    statusEl.className = `status-indicator ${Utils.getStatusClass(info.onlineStatus)}`;
-    document.getElementById('chatStatusText').textContent = Utils.getStatusText(info.onlineStatus);
+    // 委托给 ChatHeaderController（令牌保护由调用方 openChat 保证）
+    ChatHeaderController.renderPrivate(this._sessionToken);
   },
 
   _updateInputState() {
@@ -148,10 +119,8 @@ const ChatManager = {
   updateHeaderStatus(status) {
     if (!this.currentFriendInfo) return;
     this.currentFriendInfo.onlineStatus = status;
-    const statusEl = document.getElementById('chatStatus');
-    statusEl.style.display = '';
-    statusEl.className = `status-indicator ${Utils.getStatusClass(status)}`;
-    document.getElementById('chatStatusText').textContent = Utils.getStatusText(status);
+    // 委托给 ChatHeaderController（内部验证是否为当前活跃私聊）
+    ChatHeaderController.updateOnlineStatus(this.currentFriendId, status);
   },
 
   async loadHistory(friendId, pageNum, replace = false) {

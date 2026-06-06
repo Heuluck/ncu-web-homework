@@ -17,4 +17,5 @@ jobs:
           script: |
             cd ~/ncu-web-homework
             git pull
+            export PUBLIC_IP=${{ secrets.PUBLIC_IP }}
             docker compose up -d --build

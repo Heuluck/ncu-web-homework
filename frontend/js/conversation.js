@@ -295,7 +295,7 @@ const ConversationManager = {
       this.renderList();
     }
     if (ChatManager.currentFriendId === userId) {
-      ChatManager.updateHeaderStatus(status);
+      ChatHeaderController.updateOnlineStatus(userId, status);
     }
   },
 

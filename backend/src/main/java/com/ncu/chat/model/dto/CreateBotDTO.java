@@ -22,4 +22,6 @@ public class CreateBotDTO {
     private BigDecimal triggerProbability;
     private BigDecimal temperature = BigDecimal.ONE;
     private BigDecimal topP = BigDecimal.ONE;
+    /** 复制模式：从哪个机器人复制 API Key（可选） */
+    private Long copyFromBotId;
 }

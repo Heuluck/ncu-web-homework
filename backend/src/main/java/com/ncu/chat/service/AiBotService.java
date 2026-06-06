@@ -18,11 +18,18 @@ public interface AiBotService {
 
     /**
      * 异步检查并触发 AI 回复
+     * @param chainDepth 链式触发深度（0=用户消息，>0=机器人消息）
      */
-    void checkAndTriggerBots(Long groupId, Long senderId, String content);
+    void checkAndTriggerBots(Long groupId, Long senderId, String content, int chainDepth);
+
+    /** 默认链式深度为 0（用户消息） */
+    default void checkAndTriggerBots(Long groupId, Long senderId, String content) {
+        checkAndTriggerBots(groupId, senderId, content, 0);
+    }
 
     /**
      * 调用 AI API 并在群聊中发送回复
+     * @param chainDepth 链式触发深度
      */
-    void callAiAndReply(Long groupId, AiBot bot, String userMessage, Long senderId, String senderName);
+    void callAiAndReply(Long groupId, AiBot bot, String userMessage, Long senderId, String senderName, int chainDepth);
 }

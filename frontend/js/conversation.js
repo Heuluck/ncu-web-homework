@@ -128,13 +128,13 @@ const ConversationManager = {
       html += '<div class="list-group-title">未读消息</div>';
       unreadActive.forEach(c => { html += this._renderItem(c); });
     }
-    if (muted.length > 0) {
-      html += '<div class="list-group-title">免打扰</div>';
-      muted.forEach(c => { html += this._renderItem(c); });
-    }
     if (readNormal.length > 0) {
       html += '<div class="list-group-title">全部会话</div>';
       readNormal.forEach(c => { html += this._renderItem(c); });
+    }
+    if (muted.length > 0) {
+      html += '<div class="list-group-title">免打扰</div>';
+      muted.forEach(c => { html += this._renderItem(c); });
     }
 
     container.innerHTML = html;

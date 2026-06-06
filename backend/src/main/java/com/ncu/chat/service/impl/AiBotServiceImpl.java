@@ -87,7 +87,14 @@ public class AiBotServiceImpl implements AiBotService {
         bot.setName(dto.getName());
         bot.setAvatar(dto.getAvatar());
         bot.setEndpoint(dto.getEndpoint());
-        bot.setApiKeyEncrypted(cryptoUtil.encrypt(dto.getApiKey()));
+        // 复制模式：从原机器人复制加密的 API Key
+        if ("__copy__".equals(dto.getApiKey()) && dto.getCopyFromBotId() != null) {
+            AiBot sourceBot = aiBotMapper.selectById(dto.getCopyFromBotId());
+            if (sourceBot == null) throw new BusinessException("源机器人不存在");
+            bot.setApiKeyEncrypted(sourceBot.getApiKeyEncrypted());
+        } else {
+            bot.setApiKeyEncrypted(cryptoUtil.encrypt(dto.getApiKey()));
+        }
         bot.setModel(dto.getModel());
         bot.setSystemPrompt(dto.getSystemPrompt() != null ? dto.getSystemPrompt() : "你是一个友好的AI助手，请用中文回答问题。");
         bot.setTriggerType(dto.getTriggerType() != null ? dto.getTriggerType() : 0);
@@ -219,7 +226,10 @@ public class AiBotServiceImpl implements AiBotService {
 
     @Override
     @Async
-    public void checkAndTriggerBots(Long groupId, Long senderId, String content) {
+    public void checkAndTriggerBots(Long groupId, Long senderId, String content, int chainDepth) {
+        // 链式触发最多 3 层
+        if (chainDepth >= 3) return;
+
         try {
             // 获取群内所有机器人
             List<GroupBot> gbs = groupBotMapper.selectList(
@@ -231,7 +241,8 @@ public class AiBotServiceImpl implements AiBotService {
             if (bots.isEmpty()) return;
 
             // 获取发送者名称
-            User sender = userMapper.selectById(senderId);
+            boolean isBotSender = senderId == null || senderId == 0L;
+            User sender = isBotSender ? null : userMapper.selectById(senderId);
             String senderName = sender != null ? sender.getNickname() : "用户";
 
             for (AiBot bot : bots) {
@@ -249,8 +260,8 @@ public class AiBotServiceImpl implements AiBotService {
                     if (userMessage.isEmpty()) userMessage = "你好";
                 }
 
-                // 非 @触发时，按 triggerType 判断
-                if (!shouldTrigger) {
+                // 非 @触发时，按 triggerType 判断（仅用户消息，机器人消息只响应 @）
+                if (!shouldTrigger && !isBotSender) {
                     switch (bot.getTriggerType()) {
                         case 1: // 每次触发
                             shouldTrigger = true;
@@ -269,11 +280,11 @@ public class AiBotServiceImpl implements AiBotService {
                     // 限流检查
                     if (!checkRateLimit(groupId, bot.getId())) {
                         if (isAtTrigger) {
-                            sendBotMessage(groupId, bot, "⚠️ AI 机器人暂时繁忙，请稍后再试。");
+                            sendBotMessage(groupId, bot, "⚠️ AI 机器人暂时繁忙，请稍后再试。", chainDepth);
                         }
                         continue;
                     }
-                    callAiAndReply(groupId, bot, userMessage, senderId, senderName);
+                    callAiAndReply(groupId, bot, userMessage, senderId, senderName, chainDepth);
                 }
             }
         } catch (Exception e) {
@@ -282,7 +293,7 @@ public class AiBotServiceImpl implements AiBotService {
     }
 
     @Override
-    public void callAiAndReply(Long groupId, AiBot bot, String userMessage, Long senderId, String senderName) {
+    public void callAiAndReply(Long groupId, AiBot bot, String userMessage, Long senderId, String senderName, int chainDepth) {
         try {
             String apiKey = cryptoUtil.decrypt(bot.getApiKeyEncrypted());
 
@@ -379,14 +390,14 @@ public class AiBotServiceImpl implements AiBotService {
                     if (message != null) {
                         String reply = (String) message.get("content");
                         if (reply != null && !reply.isBlank()) {
-                            sendBotMessage(groupId, bot, reply.trim());
+                            sendBotMessage(groupId, bot, reply.trim(), chainDepth);
                         }
                     }
                 }
             }
         } catch (Exception e) {
             System.err.println("[Bot] AI 调用失败: " + e.getMessage());
-            sendBotMessage(groupId, bot, "⚠️ AI 调用失败：" + e.getMessage());
+            sendBotMessage(groupId, bot, "⚠️ AI 调用失败：" + e.getMessage(), chainDepth);
         }
     }
 
@@ -415,7 +426,7 @@ public class AiBotServiceImpl implements AiBotService {
         return true;
     }
 
-    private void sendBotMessage(Long groupId, AiBot bot, String content) {
+    private void sendBotMessage(Long groupId, AiBot bot, String content, int chainDepth) {
         GroupMessage msg = new GroupMessage();
         msg.setGroupId(groupId);
         msg.setSenderId(0L);
@@ -440,6 +451,13 @@ public class AiBotServiceImpl implements AiBotService {
         vo.setIsSelf(false);
 
         webSocketGroupController.sendGroupMessage(vo);
+
+        // 链式触发：机器人回复后检查是否 @ 了其他机器人
+        try {
+            checkAndTriggerBots(groupId, 0L, content, chainDepth + 1);
+        } catch (Exception e) {
+            System.err.println("[Bot] 链式触发异常: " + e.getMessage());
+        }
     }
 
     /**
@@ -447,6 +465,8 @@ public class AiBotServiceImpl implements AiBotService {
      */
     private String buildSystemPrompt(AiBot bot, Long groupId) {
         StringBuilder sb = new StringBuilder();
+        // 机器人自身信息
+        sb.append("【你的名字】").append(bot.getName()).append("\n");
         if (bot.getSystemPrompt() != null && !bot.getSystemPrompt().isBlank()) {
             sb.append(bot.getSystemPrompt()).append("\n\n");
         }

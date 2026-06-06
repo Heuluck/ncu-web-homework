@@ -244,10 +244,11 @@ const BotModal = {
         const pTemp = p.temperature != null ? p.temperature : 1.0;
         const pTopP = p.topP != null ? p.topP : 1.0;
 
-        const apiKeyLabel = isEdit
+        const isCopy = mode === 'copy';
+        const apiKeyLabel = (isEdit || isCopy)
             ? `<label class="form-label">API Key（留空不变）</label>`
             : `<label class="form-label">API Key <span class="text-danger">*</span></label>`;
-        const apiKeyPlaceholder = isEdit ? '不修改请留空' : 'sk-...';
+        const apiKeyPlaceholder = (isEdit || isCopy) ? '不修改请留空' : 'sk-...';
 
         modal.innerHTML = `<div class="modal-container" style="max-width:520px;max-height:90vh;">
             <div class="modal-header">
@@ -272,7 +273,7 @@ const BotModal = {
                         ${apiKeyLabel}
                         <div style="position:relative;">
                             <input type="password" id="botApiKey" class="input-control" placeholder="${apiKeyPlaceholder}" autocomplete="off">
-                            ${isEdit ? `<span style="position:absolute;right:12px;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--text-muted);font-size:11px;">🔒 已加密</span>` : ''}
+                            ${(isEdit || isCopy) ? `<span style="position:absolute;right:12px;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--text-muted);font-size:11px;">🔒 已加密</span>` : ''}
                         </div>
                     </div>
                     <div class="form-group">
@@ -337,7 +338,7 @@ const BotModal = {
 
             if (!name) { Utils.showToast('请输入机器人名称', 'error'); return; }
             if (!endpoint) { Utils.showToast('请输入 Endpoint', 'error'); return; }
-            if (!isEdit && !apiKey) { Utils.showToast('请输入 API Key', 'error'); return; }
+            if (!isEdit && !isCopy && !apiKey) { Utils.showToast('请输入 API Key', 'error'); return; }
             if (!model) { Utils.showToast('请输入模型名称', 'error'); return; }
 
             const triggerType = parseInt(document.getElementById('botTriggerType').value);
@@ -358,7 +359,12 @@ const BotModal = {
                 temperature: parseFloat(document.getElementById('botTemperature').value) || 1.0,
                 topP: parseFloat(document.getElementById('botTopP').value) || 1.0
             };
-            if (apiKey) dto.apiKey = apiKey;
+            if (apiKey) {
+                dto.apiKey = apiKey;
+            } else if (isCopy) {
+                dto.apiKey = '__copy__';
+                dto.copyFromBotId = p.id;
+            }
 
             const btn = document.getElementById('botSubmitBtn');
             btn.disabled = true;

@@ -1,5 +1,8 @@
 # 数据库迁移脚本 (PowerShell)
 
+# 确保 stdin/stdout 编码为 UTF-8（emoji 等 4 字节字符需要）
+[Console]::OutputEncoding = [Text.Encoding]::UTF8
+
 $DB_HOST = if ($env:DB_HOST) { $env:DB_HOST } else { "localhost" }
 $DB_PORT = if ($env:DB_PORT) { $env:DB_PORT } else { "3306" }
 $DB_USER = if ($env:DB_USER) { $env:DB_USER } else { "root" }
@@ -28,8 +31,7 @@ Write-Host "执行迁移文件..."
 $count = 0
 Get-ChildItem -Path $MIGRATION_DIR -Filter "*.sql" | Sort-Object Name | ForEach-Object {
     Write-Host "   -> $($_.Name)"
-    $content = Get-Content $_.FullName -Raw
-    $content | mysql $CHARSET_OPTS -h$DB_HOST -P$DB_PORT -u$DB_USER -p$DB_PASS $DB_NAME
+    Get-Content $_.FullName -Raw -Encoding UTF8 | mysql $CHARSET_OPTS -h$DB_HOST -P$DB_PORT -u$DB_USER -p$DB_PASS $DB_NAME
     $count++
 }
 

@@ -19,16 +19,20 @@ services:
     network_mode: host
     environment:
       TZ: Asia/Shanghai
-    command: |
-      -n --log-file=stdout
-      --listening-port=3478
-      --min-port=49152
-      --max-port=65535
-      --fingerprint
-      --lt-cred-mech
-      --user=chat:chat-turn-password
-      --realm=ncu-chat
-      --no-cli
+      PUBLIC_IP: ${PUBLIC_IP:-127.0.0.1}
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - >
+        turnserver -n --log-file=stdout
+        --external-ip=$${PUBLIC_IP:-127.0.0.1}/$${PRIVATE_IP:-172.17.46.82}
+        --listening-port=3478
+        --min-port=49152
+        --max-port=65535
+        --fingerprint
+        --lt-cred-mech
+        --user=chat:chat-turn-password
+        --realm=ncu-chat
+        --no-cli
     restart: unless-stopped
 
   app:

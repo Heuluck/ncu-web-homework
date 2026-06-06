@@ -36,17 +36,24 @@ public class WebSocketEventListener {
 
         sessionManager.addSession(userId, sessionId);
 
-        // 更新用户状态为在线
-        User u = new User();
-        u.setId(userId);
-        u.setStatus(1);
-        userMapper.updateById(u);
+        // 更新用户状态为在线（仅当当前为离线时，保留用户手动设置的忙碌/勿扰状态）
+        User dbUser = userMapper.selectById(userId);
+        int actualStatus;
+        if (dbUser == null || dbUser.getStatus() == 0) {
+            User u = new User();
+            u.setId(userId);
+            u.setStatus(1);
+            userMapper.updateById(u);
+            actualStatus = 1;
+        } else {
+            actualStatus = dbUser.getStatus(); // 保留忙碌(2)/勿扰(3)
+        }
 
         // 广播上线通知
         Map<String, Object> statusMsg = new HashMap<>();
         statusMsg.put("type", "STATUS_CHANGE");
         statusMsg.put("userId", userId);
-        statusMsg.put("status", 1);
+        statusMsg.put("status", actualStatus);
         statusMsg.put("timestamp", LocalDateTime.now().toString());
         messagingTemplate.convertAndSend("/topic/status", statusMsg);
 

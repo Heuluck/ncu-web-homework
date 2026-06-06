@@ -105,8 +105,86 @@ const Utils = {
    * @param {string} type - 类型：success, error, warning, info
    */
   showToast(message, type = 'info') {
-    // TODO: 实现 toast 提示
-    console.log(`[${type.toUpperCase()}] ${message}`);
+    const container = document.getElementById('toastContainer') || (() => {
+      const el = document.createElement('div');
+      el.id = 'toastContainer';
+      el.style.cssText = 'position:fixed;top:20px;right:20px;z-index:100002;display:flex;flex-direction:column;gap:8px;pointer-events:none;';
+      document.body.appendChild(el);
+      return el;
+    })();
+    const colors = { success: 'var(--color-success)', error: 'var(--color-danger)', warning: 'var(--color-warning)', info: 'var(--color-primary)' };
+    const icons = { success: 'check-circle', error: 'alert-circle', warning: 'alert-triangle', info: 'info' };
+    const toast = document.createElement('div');
+    toast.style.cssText = `pointer-events:auto;display:flex;align-items:center;gap:10px;padding:12px 18px;background:var(--bg-app);border:1px solid var(--border-subtle);border-left:3px solid ${colors[type] || colors.info};border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);font-size:var(--text-sm);color:var(--text-main);animation:toastSlideIn 0.25s ease-out;max-width:360px;`;
+    toast.innerHTML = `<i data-lucide="${icons[type] || 'info'}" style="width:18px;height:18px;color:${colors[type] || colors.info};flex-shrink:0;"></i><span>${this.escapeHtml(message)}</span>`;
+    container.appendChild(toast);
+    if (typeof lucide !== 'undefined') lucide.createIcons({ nodes: [toast] });
+    setTimeout(() => { toast.style.opacity = '0'; toast.style.transition = 'opacity 0.3s'; setTimeout(() => toast.remove(), 300); }, 3000);
+  },
+
+  /**
+   * 显示提示弹窗（替代 alert）
+   * @param {string} message - 提示内容
+   * @param {string} title - 标题
+   * @returns {Promise<void>}
+   */
+  showAlert(message, title = '提示') {
+    return new Promise(resolve => {
+      const overlay = document.createElement('div');
+      overlay.className = 'modal-overlay';
+      overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.45);display:flex;align-items:center;justify-content:center;z-index:100001;animation:fadeIn 0.15s ease;';
+      overlay.innerHTML = `<div class="modal-container" style="max-width:380px;width:90%;background:var(--bg-app);border-radius:var(--radius-2xl);box-shadow:var(--shadow-lg);animation:modalSlideIn 0.2s ease-out;">
+        <div style="padding:var(--space-6) var(--space-6) var(--space-4);">
+          <div style="font-size:var(--text-lg);font-weight:var(--font-semibold);color:var(--text-main);margin-bottom:var(--space-3);">${this.escapeHtml(title)}</div>
+          <div style="font-size:var(--text-sm);color:var(--text-muted);line-height:1.6;white-space:pre-wrap;">${this.escapeHtml(message)}</div>
+        </div>
+        <div style="padding:0 var(--space-6) var(--space-5);display:flex;justify-content:flex-end;">
+          <button class="btn btn-primary btn-sm alert-ok-btn" style="min-width:72px;">确定</button>
+        </div>
+      </div>`;
+      const close = () => { overlay.remove(); resolve(); };
+      overlay.querySelector('.alert-ok-btn').addEventListener('click', close);
+      overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+      const onKey = e => { if (e.key === 'Enter' || e.key === 'Escape') { e.preventDefault(); close(); document.removeEventListener('keydown', onKey); } };
+      document.addEventListener('keydown', onKey);
+      document.body.appendChild(overlay);
+      overlay.querySelector('.alert-ok-btn').focus();
+    });
+  },
+
+  /**
+   * 显示确认弹窗（替代 confirm）
+   * @param {string} message - 确认内容
+   * @param {object} options - { title, confirmText, cancelText, danger }
+   * @returns {Promise<boolean>}
+   */
+  showConfirm(message, options = {}) {
+    const { title = '确认', confirmText = '确定', cancelText = '取消', danger = false } = options;
+    return new Promise(resolve => {
+      const overlay = document.createElement('div');
+      overlay.className = 'modal-overlay';
+      overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.45);display:flex;align-items:center;justify-content:center;z-index:100001;animation:fadeIn 0.15s ease;';
+      const confirmBtnClass = danger ? 'btn btn-danger btn-sm' : 'btn btn-primary btn-sm';
+      overlay.innerHTML = `<div class="modal-container" style="max-width:380px;width:90%;background:var(--bg-app);border-radius:var(--radius-2xl);box-shadow:var(--shadow-lg);animation:modalSlideIn 0.2s ease-out;">
+        <div style="padding:var(--space-6) var(--space-6) var(--space-4);">
+          <div style="font-size:var(--text-lg);font-weight:var(--font-semibold);color:var(--text-main);margin-bottom:var(--space-3);">${this.escapeHtml(title)}</div>
+          <div style="font-size:var(--text-sm);color:var(--text-muted);line-height:1.6;white-space:pre-wrap;">${this.escapeHtml(message)}</div>
+        </div>
+        <div style="padding:0 var(--space-6) var(--space-5);display:flex;justify-content:flex-end;gap:var(--space-3);">
+          <button class="btn btn-ghost btn-sm confirm-cancel-btn" style="min-width:72px;">${this.escapeHtml(cancelText)}</button>
+          <button class="${confirmBtnClass} confirm-ok-btn" style="min-width:72px;">${this.escapeHtml(confirmText)}</button>
+        </div>
+      </div>`;
+      let settled = false;
+      const finish = val => { if (settled) return; settled = true; overlay.remove(); resolve(val); };
+      overlay.querySelector('.confirm-ok-btn').addEventListener('click', () => finish(true));
+      overlay.querySelector('.confirm-cancel-btn').addEventListener('click', () => finish(false));
+      overlay.addEventListener('click', e => { if (e.target === overlay) finish(false); });
+      const onKey = e => { if (e.key === 'Enter') { e.preventDefault(); finish(true); document.removeEventListener('keydown', onKey); } else if (e.key === 'Escape') { e.preventDefault(); finish(false); document.removeEventListener('keydown', onKey); } };
+      document.addEventListener('keydown', onKey);
+      document.body.appendChild(overlay);
+      overlay.querySelector('.confirm-cancel-btn').focus();
+    });
   },
 
   /**

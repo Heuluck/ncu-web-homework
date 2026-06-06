@@ -128,7 +128,7 @@ const AdminApp = {
   },
 
   async _resetPwd(userId, name) {
-    if (!confirm(`确定将用户 "${name}" 的密码重置为 123456 吗？`)) return;
+    if (!await Utils.showConfirm(`确定将用户 "${name}" 的密码重置为 123456 吗？`, { title: '重置密码', confirmText: '重置', danger: true })) return;
     const res = await API.put(`/api/admin/users/${userId}/reset-password`, {});
     if (res.code === 200) {
       Utils.showToast('密码已重置为 123456', 'success');
@@ -201,7 +201,7 @@ const AdminApp = {
   },
 
   async _disbandGroup(id, name) {
-    if (!confirm(`确定解散群聊 "${name}" 吗？此操作不可撤销。`)) return;
+    if (!await Utils.showConfirm(`确定解散群聊 "${name}" 吗？此操作不可撤销。`, { title: '解散群聊', confirmText: '解散', danger: true })) return;
     const res = await API.delete(`/api/admin/groups/${id}`);
     if (res.code === 200) {
       Utils.showToast('群聊已解散', 'success');
@@ -316,7 +316,7 @@ const AdminApp = {
   },
 
   async _deleteAnnounce(id, title) {
-    if (!confirm(`确定删除公告 "${title}" 吗？`)) return;
+    if (!await Utils.showConfirm(`确定删除公告 "${title}" 吗？`, { title: '删除公告', confirmText: '删除', danger: true })) return;
     const res = await API.delete(`/api/admin/announcements/${id}`);
     if (res.code === 200) {
       Utils.showToast('删除成功', 'success');
@@ -438,7 +438,7 @@ const AdminApp = {
   },
 
   async _deleteSensitive(id, word) {
-    if (!confirm(`确定删除敏感词 "${word}" 吗？`)) return;
+    if (!await Utils.showConfirm(`确定删除敏感词 "${word}" 吗？`, { title: '删除敏感词', confirmText: '删除', danger: true })) return;
     const res = await API.delete(`/api/admin/sensitive-words/${id}`);
     if (res.code === 200) {
       Utils.showToast('删除成功', 'success');

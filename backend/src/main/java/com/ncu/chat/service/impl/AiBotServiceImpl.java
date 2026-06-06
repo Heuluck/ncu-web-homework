@@ -149,8 +149,8 @@ public class AiBotServiceImpl implements AiBotService {
                 new LambdaQueryWrapper<GroupMember>()
                         .eq(GroupMember::getGroupId, groupId)
                         .eq(GroupMember::getUserId, userId));
-        if (member == null || member.getRole() != 2) {
-            throw new BusinessException("只有群主可以添加机器人");
+        if (member == null || member.getRole() < 1) {
+            throw new BusinessException("只有群主或管理员可以添加机器人");
         }
         AiBot bot = aiBotMapper.selectById(botId);
         if (bot == null) throw new BusinessException("机器人不存在");
@@ -165,6 +165,7 @@ public class AiBotServiceImpl implements AiBotService {
         GroupBot gb = new GroupBot();
         gb.setGroupId(groupId);
         gb.setBotId(botId);
+        gb.setAddedBy(userId);
         groupBotMapper.insert(gb);
     }
 
@@ -174,9 +175,24 @@ public class AiBotServiceImpl implements AiBotService {
                 new LambdaQueryWrapper<GroupMember>()
                         .eq(GroupMember::getGroupId, groupId)
                         .eq(GroupMember::getUserId, userId));
-        if (member == null || member.getRole() != 2) {
-            throw new BusinessException("只有群主可以移除机器人");
+        if (member == null) throw new BusinessException("你不是群成员");
+
+        // 群主可以移除任何机器人；添加该机器人的管理员可以移除；机器人主人可以移除
+        GroupBot gb = groupBotMapper.selectOne(
+                new LambdaQueryWrapper<GroupBot>()
+                        .eq(GroupBot::getGroupId, groupId)
+                        .eq(GroupBot::getBotId, botId));
+        if (gb == null) throw new BusinessException("该机器人不在此群聊中");
+
+        AiBot bot = aiBotMapper.selectById(botId);
+        boolean isOwner = member.getRole() == 2;
+        boolean isAddedBy = gb.getAddedBy() != null && gb.getAddedBy().equals(userId);
+        boolean isBotOwner = bot != null && bot.getOwnerId().equals(userId);
+
+        if (!isOwner && !isAddedBy && !isBotOwner) {
+            throw new BusinessException("只有群主、添加者或机器人主人可以移除机器人");
         }
+
         groupBotMapper.delete(
                 new LambdaQueryWrapper<GroupBot>()
                         .eq(GroupBot::getGroupId, groupId)
@@ -190,7 +206,13 @@ public class AiBotServiceImpl implements AiBotService {
         if (gbs.isEmpty()) return Collections.emptyList();
         List<Long> botIds = gbs.stream().map(GroupBot::getBotId).collect(Collectors.toList());
         List<AiBot> bots = aiBotMapper.selectBatchIds(botIds);
-        return bots.stream().map(this::toVO).collect(Collectors.toList());
+        Map<Long, Long> addedByMap = gbs.stream()
+                .collect(Collectors.toMap(GroupBot::getBotId, gb -> gb.getAddedBy() != null ? gb.getAddedBy() : 0L));
+        return bots.stream().map(b -> {
+            AiBotVO vo = toVO(b);
+            vo.setAddedBy(addedByMap.getOrDefault(b.getId(), 0L));
+            return vo;
+        }).collect(Collectors.toList());
     }
 
     // ==================== 触发逻辑 ====================

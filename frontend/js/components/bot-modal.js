@@ -7,6 +7,8 @@ const BotModal = {
     groupId: null,
     groupInfo: null,
     isOwner: false,
+    isAdmin: false,
+    canManage: false, // 群主或管理员
     currentView: 'list', // 'list' | 'myBots' | 'form'
 
     async show(groupId) {
@@ -14,6 +16,8 @@ const BotModal = {
         const infoRes = await API.get(`/api/group/info/${groupId}`);
         this.groupInfo = (infoRes && infoRes.code === 200) ? infoRes.data : {};
         this.isOwner = this.groupInfo.myRole === 2;
+        this.isAdmin = this.groupInfo.myRole === 1;
+        this.canManage = this.groupInfo.myRole >= 1;
         await BotManager.loadGroupBots(groupId);
         await BotManager.loadMyBots();
         this._renderListView();
@@ -46,7 +50,9 @@ const BotModal = {
                     actions += `<button class="btn btn-ghost btn-sm bot-edit-btn" data-bot-id="${bot.id}" title="编辑"><i data-lucide="pencil" style="width:13px;height:13px;"></i></button>`;
                     actions += `<button class="btn btn-ghost btn-sm bot-copy-btn" data-bot-id="${bot.id}" title="复制"><i data-lucide="copy" style="width:13px;height:13px;"></i></button>`;
                 }
-                if (this.isOwner) {
+                // 群主可移除任何机器人；添加者可移除；机器人主人可移除
+                const canRemove = this.isOwner || bot.addedBy === Auth.getUserId() || isMyBot;
+                if (canRemove) {
                     actions += `<button class="btn btn-ghost btn-sm bot-remove-btn" data-bot-id="${bot.id}" title="从群聊移除"><i data-lucide="x" style="width:13px;height:13px;"></i></button>`;
                 }
                 return `<div class="bot-card" data-bot-id="${bot.id}">
@@ -71,8 +77,8 @@ const BotModal = {
                 ${botsHtml}
             </div>
             <div class="modal-footer" style="flex-direction:column;gap:8px;">
-                ${this.isOwner ? `<button class="btn btn-primary btn-sm" id="botAddBtn" style="width:100%;"><i data-lucide="plus" style="width:14px;height:14px;"></i> 添加机器人</button>` : ''}
-                <button class="btn btn-ghost btn-sm" id="botMyBotsBtn" style="width:100%;"><i data-lucide="settings" style="width:14px;height:14px;"></i> 添加我现有的机器人</button>
+                ${this.canManage ? `<button class="btn btn-primary btn-sm" id="botAddBtn" style="width:100%;"><i data-lucide="plus" style="width:14px;height:14px;"></i> 添加机器人</button>` : ''}
+                <button class="btn btn-ghost btn-sm" id="botMyBotsBtn" style="width:100%;"><i data-lucide="settings" style="width:14px;height:14px;"></i> ${this.canManage ? '添加我现有的机器人' : '管理我的机器人'}</button>
                 <button class="btn btn-secondary btn-sm" id="botCloseBtn" style="width:100%;">关闭</button>
             </div>
         </div>`;
@@ -86,7 +92,7 @@ const BotModal = {
 
         modal.querySelectorAll('.bot-remove-btn').forEach(btn => {
             btn.addEventListener('click', async () => {
-                if (!confirm('确定从群聊移除此机器人？')) return;
+                if (!await Utils.showConfirm('确定从群聊移除此机器人？', { title: '移除机器人', confirmText: '移除', danger: true })) return;
                 await BotManager.removeBotFromGroup(parseInt(btn.dataset.botId), this.groupId);
                 await BotManager.loadGroupBots(this.groupId);
                 this._renderListView();
@@ -135,7 +141,7 @@ const BotModal = {
                 actions += `<button class="btn btn-ghost btn-sm mybot-edit-btn" data-bot-id="${bot.id}" title="编辑"><i data-lucide="pencil" style="width:13px;height:13px;"></i></button>`;
                 actions += `<button class="btn btn-ghost btn-sm mybot-copy-btn" data-bot-id="${bot.id}" title="复制"><i data-lucide="copy" style="width:13px;height:13px;"></i></button>`;
                 actions += `<button class="btn btn-ghost btn-sm mybot-delete-btn" data-bot-id="${bot.id}" title="删除"><i data-lucide="trash-2" style="width:13px;height:13px;"></i></button>`;
-                if (this.isOwner && !inGroup) {
+                if (this.canManage && !inGroup) {
                     actions += `<button class="btn btn-ghost btn-sm mybot-add-btn" data-bot-id="${bot.id}" title="添加到当前群聊"><i data-lucide="plus-circle" style="width:13px;height:13px;"></i></button>`;
                 }
                 const statusTag = inGroup ? '<span class="text-muted" style="font-size:10px;">已在群中</span>' : '';
@@ -192,7 +198,7 @@ const BotModal = {
             btn.addEventListener('click', async () => {
                 const botId = parseInt(btn.dataset.botId);
                 const bot = BotManager.myBots.find(b => b.id === botId);
-                if (!confirm(`确定彻底删除机器人 "${bot ? bot.name : ''}" 吗？此操作不可恢复。`)) return;
+                if (!await Utils.showConfirm(`确定彻底删除机器人 "${bot ? bot.name : ''}" 吗？此操作不可恢复。`, { title: '删除机器人', confirmText: '删除', danger: true })) return;
                 const ok = await BotManager.deleteBot(botId);
                 if (ok) {
                     await BotManager.loadMyBots();

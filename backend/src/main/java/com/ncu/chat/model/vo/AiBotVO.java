@@ -18,5 +18,7 @@ public class AiBotVO {
     private BigDecimal triggerProbability;
     private BigDecimal temperature;
     private BigDecimal topP;
+    /** 谁将此机器人添加到群聊（群主或管理员 userId） */
+    private Long addedBy;
     private LocalDateTime createTime;
 }

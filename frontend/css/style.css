@@ -81,6 +81,8 @@
 .chat-history-modal-overlay{position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5)}
 .chat-history-modal-content{position:relative;width:90%;max-width:700px;height:80vh;background:var(--bg-app);border-radius:var(--radius-2xl);box-shadow:var(--shadow-lg);display:flex;flex-direction:column;overflow:hidden;z-index:2;animation:modalSlideIn 0.2s ease-out}
 @keyframes modalSlideIn{from{opacity:0;transform:translateY(-20px) scale(0.95)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes toastSlideIn{from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:translateX(0)}}
 .chat-history-modal-header{display:flex;align-items:center;justify-content:space-between;padding:var(--space-5) var(--space-6);border-bottom:1px solid var(--border-subtle)}
 .chat-history-modal-header h3{font-size:var(--text-lg);font-weight:var(--font-semibold);color:var(--text-main);margin:0}
 .chat-history-modal-body{flex:1;display:flex;overflow:hidden}

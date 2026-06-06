@@ -11,6 +11,7 @@ public class GroupBot {
     private Long id;
     private Long groupId;
     private Long botId;
+    private Long addedBy;
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;
 }

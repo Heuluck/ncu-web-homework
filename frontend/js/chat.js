@@ -312,7 +312,7 @@ const ChatManager = {
     // 上传文件
     const uploadResult = await API.upload(file);
     if (!uploadResult || uploadResult.code !== 200) {
-      alert('图片上传失败');
+      Utils.showToast('图片上传失败', 'error');
       return;
     }
 
@@ -330,7 +330,7 @@ const ChatManager = {
     // 上传文件
     const uploadResult = await API.upload(file);
     if (!uploadResult || uploadResult.code !== 200) {
-      alert('文件上传失败');
+      Utils.showToast('文件上传失败', 'error');
       return;
     }
 

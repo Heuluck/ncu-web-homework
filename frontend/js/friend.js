@@ -542,7 +542,7 @@ const FriendManager = {
 
     async _ctxDelete() {
         if (!this.currentContextFriendshipId) return;
-        if (!confirm('确定要删除该好友吗？')) return;
+        if (!await Utils.showConfirm('确定要删除该好友吗？', { title: '删除好友', confirmText: '删除', danger: true })) return;
         const res = await API.delete(`/api/friend/${this.currentContextFriendshipId}`);
         if (res && res.code === 200) {
             Utils.showToast('已删除好友', 'success');
@@ -792,7 +792,7 @@ const FriendManager = {
     },
 
     async deleteGroupConfirm(groupId, groupName) {
-        if (!confirm(`确定要删除分组「${groupName}」吗？该分组下的好友将移入默认分组。`)) return;
+        if (!await Utils.showConfirm(`确定要删除分组「${groupName}」吗？该分组下的好友将移入默认分组。`, { title: '删除分组', confirmText: '删除', danger: true })) return;
         const res = await API.delete(`/api/friend/group/${groupId}`);
         if (res && res.code === 200) {
             Utils.showToast('分组已删除', 'success');

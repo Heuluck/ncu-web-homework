@@ -321,7 +321,7 @@ const GroupManager = {
         console.log('[图片] 上传结果:', uploadResult);
         
         if (!uploadResult || uploadResult.code !== 200) {
-            alert('图片上传失败');
+            Utils.showToast('图片上传失败', 'error');
             return;
         }
 
@@ -329,7 +329,7 @@ const GroupManager = {
         console.log('[图片] fileUrl:', fileUrl);
         
         if (!fileUrl) {
-            alert('上传成功但未返回 URL');
+            Utils.showToast('上传成功但未返回 URL', 'error');
             return;
         }
         
@@ -347,7 +347,7 @@ const GroupManager = {
         // 上传文件
         const uploadResult = await API.upload(file);
         if (!uploadResult || uploadResult.code !== 200) {
-            alert('文件上传失败');
+            Utils.showToast('文件上传失败', 'error');
             return;
         }
 

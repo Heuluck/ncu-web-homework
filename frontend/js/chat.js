@@ -12,6 +12,12 @@ const ChatManager = {
   async openChat(friendId, fallbackInfo) {
     if (this.currentFriendId === friendId) return;
 
+    // 清除群聊状态
+    if (typeof GroupManager !== 'undefined') {
+      GroupManager.currentGroupId = null;
+      GroupManager.currentGroupInfo = null;
+    }
+
     this.currentFriendId = friendId;
     this.currentPage = 1;
     this.hasMore = true;
@@ -209,9 +215,10 @@ const ChatManager = {
           // 是 emoji 表情，直接显示
           contentHtml = `<span style="font-size: 28px;vertical-align:middle;">${fileUrl}</span>`;
         } else if (fileUrl) {
-          // 普通图片 - 点击弹出预览
+          // 普通图片 - 点击弹出预览（使用 lightbox）
           skipBubble = true;
-          contentHtml = `<div class="message-image-wrap" onclick="window.open('${msg.fileUrl}', '_blank')"><img src="${msg.fileUrl}" alt="图片" class="message-image"><div class="image-overlay"><div class="image-overlay-icon"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1-2-2h6"/></svg></div></div></div>`;
+          const previewUrl = msg.fileUrl.replace(/'/g, "\\'");
+          contentHtml = `<div class="message-image-wrap" onclick="GroupManager.showImagePreview('${previewUrl}')"><img src="${msg.fileUrl}" alt="图片" class="message-image"><div class="image-overlay"><div class="image-overlay-icon"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1-2-2h6"/></svg></div></div></div>`;
         } else {
           contentHtml = `<div class="message-text">${escapedContent}</div>`;
         }

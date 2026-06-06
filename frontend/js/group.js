@@ -83,6 +83,13 @@ const GroupManager = {
     // 打开群聊窗口
     async openGroupChat(groupId) {
         if (this.currentGroupId === groupId) return;
+        
+        // 清除单聊状态
+        if (typeof ChatManager !== 'undefined') {
+            ChatManager.currentFriendId = null;
+            ChatManager.currentFriendInfo = null;
+        }
+        
         this.currentGroupId = groupId;
         this.currentPage = 1;
         this.hasMore = true;

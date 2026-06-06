@@ -819,6 +819,10 @@
         e.preventDefault();
         selectAtMention(parseInt(el.dataset.idx));
       });
+      // 选中项滚动到可视区域
+      if (el.classList.contains('active')) {
+        el.scrollIntoView({ block: 'nearest' });
+      }
     });
   }
 
@@ -1222,7 +1226,7 @@
     
     messages.forEach(msg => {
       const time = new Date(msg.createTime).toLocaleString('zh-CN');
-      const sender = msg.senderNickname || '未知用户';
+      const sender = msg.botId ? `🤖 ${msg.botName || 'AI'}` : (msg.senderNickname || '未知用户');
       const content = msg.content;
       sb += `[${time}] ${sender}: ${content}\n`;
     });
@@ -1236,7 +1240,7 @@
     
     messages.forEach(msg => {
       const time = new Date(msg.createTime).toLocaleString('zh-CN');
-      const sender = msg.senderNickname || '未知用户';
+      const sender = msg.botId ? `🤖 ${msg.botName || 'AI'}` : (msg.senderNickname || '未知用户');
       let content = msg.content || '';
       const type = msg.messageType === 1 ? '图片' : (msg.messageType === 2 ? '文件' : '文字');
       

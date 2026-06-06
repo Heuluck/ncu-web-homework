@@ -174,6 +174,18 @@ public class AiBotServiceImpl implements AiBotService {
         gb.setBotId(botId);
         gb.setAddedBy(userId);
         groupBotMapper.insert(gb);
+
+        // WebSocket 广播给所有群成员：机器人已添加
+        List<Long> memberIds = groupMemberMapper.getUserIdsByGroupId(groupId);
+        Map<String, Object> event = new HashMap<>();
+        event.put("type", "BOT_ADDED");
+        event.put("groupId", groupId);
+        event.put("botId", botId);
+        event.put("botName", bot.getName());
+        event.put("botAvatar", bot.getAvatar());
+        for (Long memberId : memberIds) {
+            messagingTemplate.convertAndSendToUser(String.valueOf(memberId), "/queue/group_events", event);
+        }
     }
 
     @Override
@@ -204,6 +216,16 @@ public class AiBotServiceImpl implements AiBotService {
                 new LambdaQueryWrapper<GroupBot>()
                         .eq(GroupBot::getGroupId, groupId)
                         .eq(GroupBot::getBotId, botId));
+
+        // WebSocket 广播给所有群成员：机器人已移除
+        List<Long> memberIds = groupMemberMapper.getUserIdsByGroupId(groupId);
+        Map<String, Object> event = new HashMap<>();
+        event.put("type", "BOT_REMOVED");
+        event.put("groupId", groupId);
+        event.put("botId", botId);
+        for (Long memberId : memberIds) {
+            messagingTemplate.convertAndSendToUser(String.valueOf(memberId), "/queue/group_events", event);
+        }
     }
 
     @Override

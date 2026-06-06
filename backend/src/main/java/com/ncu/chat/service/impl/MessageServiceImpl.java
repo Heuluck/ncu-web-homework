@@ -5,6 +5,8 @@ import com.ncu.chat.mapper.GroupMessageMapper;
 import com.ncu.chat.mapper.GroupMemberMapper;
 import com.ncu.chat.mapper.PrivateMessageMapper;
 import com.ncu.chat.mapper.UserMapper;
+import com.ncu.chat.mapper.AiBotMapper;
+import com.ncu.chat.model.entity.AiBot;
 import com.ncu.chat.model.entity.GroupMessage;
 import com.ncu.chat.model.entity.PrivateMessage;
 import com.ncu.chat.model.entity.User;
@@ -30,6 +32,7 @@ public class MessageServiceImpl implements MessageService {
     private final GroupMessageMapper groupMessageMapper;
     private final GroupMemberMapper groupMemberMapper;
     private final UserMapper userMapper;
+    private final AiBotMapper aiBotMapper;
 
     private static final DateTimeFormatter DATETIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
@@ -253,8 +256,9 @@ public class MessageServiceImpl implements MessageService {
             return Collections.emptyList();
         }
 
-        // 批量查询用户信息
+        // 批量查询用户信息（仅非机器人消息）
         Set<Long> userIds = messages.stream()
+                .filter(gm -> gm.getBotId() == null)
                 .map(GroupMessage::getSenderId)
                 .collect(Collectors.toSet());
 
@@ -262,6 +266,18 @@ public class MessageServiceImpl implements MessageService {
         if (!userIds.isEmpty()) {
             List<User> users = userMapper.selectBatchIds(userIds);
             users.forEach(u -> userMap.put(u.getId(), u));
+        }
+
+        // 批量查询机器人信息
+        Set<Long> botIds = messages.stream()
+                .map(GroupMessage::getBotId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        Map<Long, AiBot> botMap = new HashMap<>();
+        if (!botIds.isEmpty()) {
+            List<AiBot> bots = aiBotMapper.selectBatchIds(botIds);
+            bots.forEach(b -> botMap.put(b.getId(), b));
         }
 
         return messages.stream()
@@ -273,9 +289,19 @@ public class MessageServiceImpl implements MessageService {
                     vo.setMessageType(gm.getMessageType());
                     vo.setFileUrl(gm.getFileUrl());
                     vo.setCreateTime(gm.getCreateTime());
-                    User sender = userMap.get(gm.getSenderId());
-                    vo.setSenderNickname(sender != null ? sender.getNickname() : "未知用户");
-                    vo.setSenderAvatar(sender != null ? sender.getAvatar() : null);
+
+                    if (gm.getBotId() != null) {
+                        AiBot bot = botMap.get(gm.getBotId());
+                        vo.setBotId(gm.getBotId());
+                        vo.setBotName(bot != null ? bot.getName() : "AI 机器人");
+                        vo.setBotAvatar(bot != null ? bot.getAvatar() : null);
+                        vo.setSenderNickname(bot != null ? bot.getName() : "AI 机器人");
+                        vo.setSenderAvatar(bot != null ? bot.getAvatar() : null);
+                    } else {
+                        User sender = userMap.get(gm.getSenderId());
+                        vo.setSenderNickname(sender != null ? sender.getNickname() : "未知用户");
+                        vo.setSenderAvatar(sender != null ? sender.getAvatar() : null);
+                    }
                     return vo;
                 })
                 .collect(Collectors.toList());

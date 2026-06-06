@@ -9,8 +9,9 @@ const GroupMemberPanel = {
     },
 
     async show(groupId, myRole) {
-        // 先关闭旧面板
-        this.close();
+        // 立即移除旧面板（不用动画，避免重复 ID 导致 getElementById 取到旧元素）
+        const old = document.getElementById('groupMemberPanelModal');
+        if (old) old.remove();
         this.currentGroupId = groupId;
         this.myRole = myRole || 0;
         const res = await API.get(`/api/group/${groupId}/members`);

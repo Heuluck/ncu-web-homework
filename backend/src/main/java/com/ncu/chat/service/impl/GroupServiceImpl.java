@@ -20,11 +20,13 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import lombok.extern.slf4j.Slf4j;
 
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 public class GroupServiceImpl implements GroupService {
 
@@ -254,18 +256,40 @@ public class GroupServiceImpl implements GroupService {
             throw new BusinessException("无权限");
         }
         ChatGroup group = chatGroupMapper.selectById(groupId);
+        // 取出当前所有成员 ID（新成员加入前）
+        List<Long> existingMemberIds = groupMemberMapper.getUserIdsByGroupId(groupId);
+
         for (Long targetId : memberIds) {
             if (getMember(groupId, targetId) != null) continue;
             addMember(groupId, targetId, 0);
             chatGroupMapper.incrementMemberCount(groupId);
 
+            // 查询新成员信息
+            User newUser = userMapper.selectById(targetId);
+
             // WebSocket 通知被邀请者
-            Map<String, Object> event = new HashMap<>();
-            event.put("type", "MEMBER_INVITED");
-            event.put("groupId", groupId);
-            event.put("groupName", group != null ? group.getName() : "");
-            event.put("userId", targetId);
-            messagingTemplate.convertAndSendToUser(String.valueOf(targetId), "/queue/group_events", event);
+            Map<String, Object> invitedEvent = new HashMap<>();
+            invitedEvent.put("type", "MEMBER_INVITED");
+            invitedEvent.put("groupId", groupId);
+            invitedEvent.put("groupName", group != null ? group.getName() : "");
+            invitedEvent.put("userId", targetId);
+            messagingTemplate.convertAndSendToUser(String.valueOf(targetId), "/queue/group_events", invitedEvent);
+
+            // 广播给所有已有成员：有人加入了
+            Map<String, Object> joinedEvent = new HashMap<>();
+            joinedEvent.put("type", "MEMBER_JOINED");
+            joinedEvent.put("groupId", groupId);
+            joinedEvent.put("userId", targetId);
+            joinedEvent.put("nickname", newUser != null ? newUser.getNickname() : "");
+            joinedEvent.put("avatar", newUser != null ? newUser.getAvatar() : "");
+            joinedEvent.put("memberCount", chatGroupMapper.selectById(groupId).getMemberCount());
+            log.info("[WS] 广播 MEMBER_JOINED groupId={}, userId={}, nickname={}, 成员数={}", groupId, targetId, newUser != null ? newUser.getNickname() : "", existingMemberIds.size());
+            for (Long memberId : existingMemberIds) {
+                log.info("[WS] 发送 MEMBER_JOINED 给 memberId={}", memberId);
+                messagingTemplate.convertAndSendToUser(String.valueOf(memberId), "/queue/group_events", joinedEvent);
+            }
+            // 加入后更新已有成员列表，使下一次循环能通知到新成员
+            existingMemberIds.add(targetId);
         }
     }
 
@@ -294,12 +318,25 @@ public class GroupServiceImpl implements GroupService {
 
         // WebSocket 通知被移除的成员
         ChatGroup group = chatGroupMapper.selectById(groupId);
-        Map<String, Object> event = new HashMap<>();
-        event.put("type", "MEMBER_REMOVED");
-        event.put("groupId", groupId);
-        event.put("groupName", group != null ? group.getName() : "");
-        event.put("userId", targetUserId);
-        messagingTemplate.convertAndSendToUser(String.valueOf(targetUserId), "/queue/group_events", event);
+        Map<String, Object> removedEvent = new HashMap<>();
+        removedEvent.put("type", "MEMBER_REMOVED");
+        removedEvent.put("groupId", groupId);
+        removedEvent.put("groupName", group != null ? group.getName() : "");
+        removedEvent.put("userId", targetUserId);
+        messagingTemplate.convertAndSendToUser(String.valueOf(targetUserId), "/queue/group_events", removedEvent);
+
+        // 广播给所有剩余成员：有人被移除了
+        List<Long> remainingIds = groupMemberMapper.getUserIdsByGroupId(groupId);
+        Map<String, Object> changeEvent = new HashMap<>();
+        changeEvent.put("type", "MEMBER_LEFT");
+        changeEvent.put("groupId", groupId);
+        changeEvent.put("userId", targetUserId);
+        changeEvent.put("memberCount", group != null ? group.getMemberCount() : 0);
+        log.info("[WS] 广播 MEMBER_LEFT groupId={}, userId={}, 剩余成员={}", groupId, targetUserId, remainingIds);
+        for (Long memberId : remainingIds) {
+            log.info("[WS] 发送 MEMBER_LEFT 给 memberId={}", memberId);
+            messagingTemplate.convertAndSendToUser(String.valueOf(memberId), "/queue/group_events", changeEvent);
+        }
     }
 
     @Override

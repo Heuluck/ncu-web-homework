@@ -411,8 +411,9 @@ const GroupManager = {
         this.renderGroupList();
     },
 
-    // 处理群事件（解散、移除成员、邀请等）
+    // 处理群事件（解散、移除成员、邀请、成员加入/离开等）
     async onGroupEvent(data) {
+        console.log('[WS] 收到群事件:', data);
         if (data.type === 'GROUP_DISBAND') {
             Utils.showToast(`群聊「${data.groupName || ''}」已被解散`, 'info');
             // 如果当前正在该群，清空聊天区
@@ -470,6 +471,74 @@ const GroupManager = {
                 if (memberModal && typeof GroupMemberPanel !== 'undefined') {
                     GroupMemberPanel.show(data.groupId, this.currentGroupInfo?.myRole || 0);
                 }
+            }
+        } else if (data.type === 'MEMBER_JOINED') {
+            console.log('[WS] MEMBER_JOINED:', data, '当前群:', this.currentGroupId, '成员数:', this.members.length);
+            // 有新成员加入当前群聊
+            if (this.currentGroupId === data.groupId) {
+                // 更新成员列表
+                if (!this.members.some(m => m.userId === data.userId)) {
+                    this.members.push({
+                        userId: data.userId,
+                        nickname: data.nickname || '',
+                        avatar: data.avatar || '',
+                        role: 0
+                    });
+                }
+                // 更新群人数
+                if (this.currentGroupInfo) {
+                    this.currentGroupInfo.memberCount = data.memberCount || this.members.length;
+                    document.getElementById('chatStatusText').textContent = `${this.currentGroupInfo.memberCount} 人`;
+                }
+                // 刷新成员面板（如果打开的话）
+                const memberModal = document.getElementById('groupMemberPanelModal');
+                if (memberModal && typeof GroupMemberPanel !== 'undefined') {
+                    GroupMemberPanel.show(data.groupId, this.currentGroupInfo?.myRole || 0);
+                }
+            }
+            // 更新群列表中的群人数
+            const groupInList = this.groups.find(g => g.groupId === data.groupId);
+            if (groupInList && data.memberCount) {
+                groupInList.memberCount = data.memberCount;
+            }
+        } else if (data.type === 'MEMBER_LEFT') {
+            // 有成员被移出当前群聊
+            if (this.currentGroupId === data.groupId) {
+                // 从成员列表移除
+                this.members = this.members.filter(m => m.userId !== data.userId);
+                // 更新群人数
+                if (this.currentGroupInfo) {
+                    this.currentGroupInfo.memberCount = data.memberCount || this.members.length;
+                    document.getElementById('chatStatusText').textContent = `${this.currentGroupInfo.memberCount} 人`;
+                }
+                // 刷新成员面板（如果打开的话）
+                const memberModal = document.getElementById('groupMemberPanelModal');
+                if (memberModal && typeof GroupMemberPanel !== 'undefined') {
+                    GroupMemberPanel.show(data.groupId, this.currentGroupInfo?.myRole || 0);
+                }
+            }
+            // 更新群列表中的群人数
+            const groupInList2 = this.groups.find(g => g.groupId === data.groupId);
+            if (groupInList2 && data.memberCount) {
+                groupInList2.memberCount = data.memberCount;
+            }
+        } else if (data.type === 'BOT_ADDED') {
+            console.log('[WS] BOT_ADDED:', data);
+            // 机器人被添加到当前群聊
+            if (this.currentGroupId === data.groupId && typeof BotManager !== 'undefined') {
+                if (!BotManager.groupBots.some(b => b.id === data.botId)) {
+                    BotManager.groupBots.push({
+                        id: data.botId,
+                        name: data.botName || '',
+                        avatar: data.botAvatar || ''
+                    });
+                }
+            }
+        } else if (data.type === 'BOT_REMOVED') {
+            console.log('[WS] BOT_REMOVED:', data);
+            // 机器人被移出当前群聊
+            if (this.currentGroupId === data.groupId && typeof BotManager !== 'undefined') {
+                BotManager.groupBots = BotManager.groupBots.filter(b => b.id !== data.botId);
             }
         }
     },

@@ -15,4 +15,7 @@ public class PrivateMessageVO {
     private LocalDateTime createTime;
     private String senderNickname;
     private String senderAvatar;
+    private Long botId;
+    private String botName;
+    private String botAvatar;
 }

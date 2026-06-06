@@ -84,14 +84,15 @@ const GroupManager = {
     async openGroupChat(groupId) {
         if (this.currentGroupId === groupId) return;
         
-        // 清除单聊状态
+        // 获取全局会话令牌并清除私聊状态
+        const token = typeof ChatManager !== 'undefined'
+            ? ++ChatManager._sessionToken : 0;
         if (typeof ChatManager !== 'undefined') {
             ChatManager.currentFriendId = null;
             ChatManager.currentFriendInfo = null;
         }
         
         this.currentGroupId = groupId;
-        const openedFor = groupId; // 记录本次打开的 ID，防止异步回调时 ID 已变
         this.currentPage = 1;
         this.hasMore = true;
 
@@ -104,8 +105,7 @@ const GroupManager = {
         if (callBtn) callBtn.style.display = 'none'; // 群聊隐藏语音通话
 
         const infoRes = await API.get(`/api/group/info/${groupId}`);
-        // 异步返回后检查是否仍然是当前群聊
-        if (this.currentGroupId !== openedFor) return;
+        if (token !== (ChatManager?._sessionToken ?? 0)) return;
         if (infoRes && infoRes.code === 200) {
             this.currentGroupInfo = infoRes.data;
             this._renderGroupHeader();
@@ -117,7 +117,7 @@ const GroupManager = {
         }
         // 预加载群成员（异步不阻塞）
         API.get(`/api/group/${groupId}/members`).then(res => {
-            if (this.currentGroupId !== openedFor) return;
+            if (token !== (ChatManager?._sessionToken ?? 0)) return;
             if (res && res.code === 200) {
                 this.members = res.data || [];
             }
@@ -128,7 +128,7 @@ const GroupManager = {
         messagesEl.innerHTML = '<div class="chat-loading"><div class="spinner"></div></div>';
 
         await this.loadGroupMessages(groupId, 1, true);
-        if (this.currentGroupId !== openedFor) return;
+        if (token !== (ChatManager?._sessionToken ?? 0)) return;
         this._markGroupRead(groupId);
         this._clearGroupUnread(groupId);
         // 清除最近会话列表中的群聊未读
@@ -140,6 +140,8 @@ const GroupManager = {
 
     _renderGroupHeader() {
         if (!this.currentGroupInfo) return;
+        // 私聊活跃时不渲染群聊头部
+        if (typeof ChatManager !== 'undefined' && ChatManager.currentFriendId) return;
 
         // 更新更多按钮为群聊样式（机器人图标）
         const moreBtn = document.getElementById('chatMoreBtn');

@@ -192,20 +192,20 @@ const ConversationManager = {
 
   selectConversation(id, type) {
     type = type || 'private';
+    // 通过全局令牌确保前后切换互斥
+    if (typeof ChatManager !== 'undefined') ++ChatManager._sessionToken;
     document.querySelectorAll('#conversationList .list-item').forEach(item => {
       const itemId = parseInt(item.dataset.friendId);
       const itemType = item.dataset.convType || 'private';
       item.classList.toggle('active', itemId === id && itemType === type);
     });
     if (type === 'group') {
-      // 切换到群聊时清除私聊状态
       ChatManager.currentFriendId = null;
       ChatManager.currentFriendInfo = null;
       if (typeof GroupManager !== 'undefined') {
         GroupManager.openGroupChat(id);
       }
     } else {
-      // 切换到私聊时清除群聊状态
       if (typeof GroupManager !== 'undefined') {
         GroupManager.currentGroupId = null;
         GroupManager.currentGroupInfo = null;

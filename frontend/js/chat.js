@@ -8,34 +8,40 @@ const ChatManager = {
   pageSize: 20,
   hasMore: true,
   loading: false,
+  /** 全局会话令牌：每次切换会话递增，异步回调校验令牌防止过期覆盖 */
+  _sessionToken: 0,
 
-  async openChat(friendId, fallbackInfo) {
-    if (this.currentFriendId === friendId) return;
-
-    // 清除群聊状态
+  /** 获取新令牌并清除对方状态 */
+  _claimSession() {
+    const token = ++this._sessionToken;
     if (typeof GroupManager !== 'undefined') {
       GroupManager.currentGroupId = null;
       GroupManager.currentGroupInfo = null;
     }
+    return token;
+  },
+
+  async openChat(friendId, fallbackInfo) {
+    if (this.currentFriendId === friendId) return;
+
+    const token = this._claimSession();
 
     this.currentFriendId = friendId;
-    const openedFor = friendId; // 记录本次打开的 ID，防止异步回调时 ID 已变
     this.currentPage = 1;
     this.hasMore = true;
 
     const conv = ConversationManager.conversations.find(c => c.friendId === friendId);
     this.currentFriendInfo = conv || (fallbackInfo || { friendId, nickname: '加载中...', avatar: null, onlineStatus: 0 });
 
-    this._renderHeader();
-    this._updateInputState();
+    if (token === this._sessionToken) this._renderHeader();
+    if (token === this._sessionToken) this._updateInputState();
     document.getElementById('chatInputArea').style.display = '';
 
     const messagesEl = document.getElementById('chatMessages');
     messagesEl.innerHTML = '<div class="chat-loading"><div class="spinner"></div></div>';
 
     await this.loadHistory(friendId, 1, true);
-    // 异步返回后检查是否仍然是当前会话
-    if (this.currentFriendId !== openedFor) return;
+    if (token !== this._sessionToken) return;
     this._markAsRead(friendId);
     ConversationManager.clearUnread(friendId);
     ConversationManager.refreshMuteBtn();
@@ -44,6 +50,8 @@ const ChatManager = {
   _renderHeader() {
     const info = this.currentFriendInfo;
     if (!info) return;
+    // 群聊活跃时不渲染私聊头部
+    if (typeof GroupManager !== 'undefined' && GroupManager.currentGroupId) return;
 
     // 更新更多按钮为私聊样式
     const moreBtn = document.getElementById('chatMoreBtn');

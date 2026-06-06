@@ -548,26 +548,28 @@
   // 认证检查
   if (!Auth.checkAuth()) location.href = '/login.html';
 
-  // 初始化用户信息
-  const user = Auth.getUser();
-  document.getElementById('myName').textContent = user?.nickname || user?.username || '用户';
-  if (user?.signature) {
-    document.getElementById('mySignature').textContent = user.signature;
+  // 从 API 拉取最新用户信息
+  async function loadMyProfile() {
+    const result = await API.get('/api/user/profile');
+    if (result?.code === 200) {
+      const u = result.data;
+      Auth.setUser(u);
+      document.getElementById('myName').textContent = u?.nickname || u?.username || '用户';
+      if (u?.signature) document.getElementById('mySignature').textContent = u.signature;
+      if (u?.avatar) document.getElementById('myAvatar').src = u.avatar;
+      const statusDot = document.getElementById('myStatus');
+      if (statusDot && u?.status !== undefined) {
+        statusDot.className = 'status-indicator';
+        if (u.status === 1) statusDot.classList.add('online');
+        else if (u.status === 2) statusDot.classList.add('busy');
+        else if (u.status === 3) statusDot.classList.add('dnd');
+      }
+      if (u?.role === 1) {
+        document.querySelectorAll('.admin-only').forEach(el => el.style.display = '');
+      }
+    }
   }
-  if (user?.avatar) {
-    document.getElementById('myAvatar').src = user.avatar;
-  }
-  const statusDot = document.getElementById('myStatus');
-  if (statusDot && user?.status !== undefined) {
-    statusDot.className = 'status-indicator';
-    if (user.status === 1) statusDot.classList.add('online');
-    else if (user.status === 2) statusDot.classList.add('busy');
-    else if (user.status === 3) statusDot.classList.add('dnd');
-  }
-  // 管理员才显示管理后台入口
-  if (user?.role === 1) {
-    document.querySelectorAll('.admin-only').forEach(el => el.style.display = '');
-  }
+  loadMyProfile();
 
   lucide.createIcons();
 

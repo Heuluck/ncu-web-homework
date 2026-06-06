@@ -117,6 +117,7 @@ public class UserServiceImpl implements UserService {
         if (dto.getNickname() != null) user.setNickname(dto.getNickname());
         if (dto.getAvatar() != null) user.setAvatar(dto.getAvatar());
         if (dto.getSignature() != null) user.setSignature(dto.getSignature());
+        if (dto.getStatus() != null) user.setStatus(dto.getStatus());
         userMapper.updateById(user);
         return convertToProfile(user);
     }

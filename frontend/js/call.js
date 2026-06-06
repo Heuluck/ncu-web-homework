@@ -90,6 +90,11 @@ const CallManager = {
     WebSocketManager.onCallSignal((signal) => {
       this._handleSignal(signal);
     });
+    WebSocketManager.onDisconnected(() => {
+      if (this.callState !== 'IDLE') {
+        this._endCall('网络已断开');
+      }
+    });
   },
 
   /**

@@ -763,12 +763,14 @@
   let atMentionPopup = null;
   let atMentionSelectedIdx = 0;
   let atMentionItems = [];
+  let atMentionStartPos = -1; // 记录 @ 在输入框中的位置
 
   function closeAtMention() {
     atMentionActive = false;
     if (atMentionPopup) { atMentionPopup.remove(); atMentionPopup = null; }
     atMentionItems = [];
     atMentionSelectedIdx = 0;
+    atMentionStartPos = -1;
   }
 
   async function showAtMentionPopup(filter) {
@@ -825,9 +827,12 @@
     if (!item) return;
     const input = messageInput;
     const val = input.value;
-    const atPos = val.lastIndexOf('@');
-    if (atPos >= 0) {
-      input.value = val.substring(0, atPos) + '@' + item.name + ' ';
+    const startPos = atMentionStartPos >= 0 ? atMentionStartPos : val.lastIndexOf('@');
+    if (startPos >= 0) {
+      // 只替换 @query 部分，保留光标之后的文字
+      const before = val.substring(0, startPos);
+      const after = val.substring(input.selectionStart);
+      input.value = before + '@' + item.name + ' ' + after;
     }
     closeAtMention();
     input.focus();
@@ -848,6 +853,7 @@
     const textBeforeCursor = value.substring(0, cursorPos);
     const atMatch = textBeforeCursor.match(/@([^@\s]*)$/);
     if (atMatch && GroupManager.currentGroupId) {
+      atMentionStartPos = cursorPos - atMatch[0].length; // 记录 @ 的位置
       showAtMentionPopup(atMatch[1]);
     } else {
       closeAtMention();

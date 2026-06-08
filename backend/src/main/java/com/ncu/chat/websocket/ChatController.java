@@ -12,6 +12,7 @@ import com.ncu.chat.model.entity.PrivateMessage;
 import com.ncu.chat.model.entity.User;
 import com.ncu.chat.model.vo.PrivateMessageVO;
 import com.ncu.chat.model.vo.VoiceMessageVO;
+import com.ncu.chat.service.SensitiveWordService;
 import com.ncu.chat.service.VoiceMessageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -37,6 +38,7 @@ public class ChatController {
     private final VoiceMessageService voiceMessageService;
     private final GroupMemberMapper groupMemberMapper;
     private final GroupMessageMapper groupMessageMapper;
+    private final SensitiveWordService sensitiveWordService;
 
     /**
      * 处理客户端发送的私聊消息
@@ -65,6 +67,25 @@ public class ChatController {
         if (blocked) {
             log.warn("消息被拉黑拦截: sender={} receiver={}", senderId, message.getTo());
             return;
+        }
+
+        // 敏感词检测（仅对文本消息）
+        if (message.getMessageType() == null || message.getMessageType() == 0) {
+            Map<String, Object> swResult = sensitiveWordService.checkSensitiveWords(message.getContent());
+            if (swResult.containsKey("hasSensitive") && (Boolean) swResult.get("hasSensitive")) {
+                log.warn("消息包含敏感词被拦截: sender={} words={}", senderId, swResult.get("words"));
+                // 通知发送者消息被拦截
+                Map<String, Object> errorMsg = new HashMap<>();
+                errorMsg.put("type", "ERROR");
+                errorMsg.put("message", "消息包含敏感词，已被拦截");
+                errorMsg.put("words", swResult.get("words"));
+                messagingTemplate.convertAndSendToUser(
+                        String.valueOf(senderId),
+                        "/queue/messages",
+                        errorMsg
+                );
+                return;
+            }
         }
 
         // 持久化消息

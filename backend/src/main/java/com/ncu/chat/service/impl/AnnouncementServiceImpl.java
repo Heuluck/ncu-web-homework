@@ -27,6 +27,16 @@ public class AnnouncementServiceImpl implements AnnouncementService {
     }
 
     @Override
+    public PageResult<Announcement> listPublishedAnnouncements(int pageNum, int pageSize) {
+        Page<Announcement> page = new Page<>(pageNum, pageSize);
+        LambdaQueryWrapper<Announcement> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Announcement::getIsPublished, 1);
+        wrapper.orderByDesc(Announcement::getUpdateTime);
+        Page<Announcement> result = announcementMapper.selectPage(page, wrapper);
+        return new PageResult<>(result.getRecords(), result.getTotal(), pageNum, pageSize);
+    }
+
+    @Override
     public Announcement createAnnouncement(Long publisherId, String title, String content, Integer isPublished) {
         Announcement announcement = new Announcement();
         announcement.setPublisherId(publisherId);

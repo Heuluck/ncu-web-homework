@@ -274,6 +274,9 @@ const GroupManager = {
             fileUrl = emojiMatch[2]; // 表情 URL
         }
 
+        // 保存内容，敏感词拦截时可回退
+        const savedContent = content;
+
         // 清空输入框
         if (input) {
             input.value = '';
@@ -292,6 +295,11 @@ const GroupManager = {
                 // 不需要手动添加消息
             } else {
                 Utils.showToast(res?.message || '发送失败', 'error');
+                // 敏感词拦截等失败时回退输入框
+                if (input) {
+                    input.value = savedContent;
+                    input.focus();
+                }
             }
         });
     },

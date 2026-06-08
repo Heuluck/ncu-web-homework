@@ -15,6 +15,7 @@ import com.ncu.chat.model.entity.User;
 import com.ncu.chat.model.vo.ConversationVO;
 import com.ncu.chat.model.vo.PrivateMessageVO;
 import com.ncu.chat.service.PrivateMessageService;
+import com.ncu.chat.service.SensitiveWordService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,12 +28,15 @@ public class PrivateMessageServiceImpl implements PrivateMessageService {
     private final PrivateMessageMapper privateMessageMapper;
     private final UserMapper userMapper;
     private final FriendshipMapper friendshipMapper;
+    private final SensitiveWordService sensitiveWordService;
 
     public PrivateMessageServiceImpl(PrivateMessageMapper privateMessageMapper,
                                      UserMapper userMapper,
-                                     FriendshipMapper friendshipMapper) {
+                                     FriendshipMapper friendshipMapper,
+                                     SensitiveWordService sensitiveWordService) {
         this.privateMessageMapper = privateMessageMapper;
         this.userMapper = userMapper;
+        this.sensitiveWordService = sensitiveWordService;
         this.friendshipMapper = friendshipMapper;
     }
 
@@ -55,6 +59,14 @@ public class PrivateMessageServiceImpl implements PrivateMessageService {
         }
         if (blocked) {
             throw new BusinessException("由于拉黑限制，无法发送消息");
+        }
+
+        // 敏感词检测（仅对文本消息）
+        if (dto.getMessageType() == null || dto.getMessageType() == 0) {
+            Map<String, Object> swResult = sensitiveWordService.checkSensitiveWords(dto.getContent());
+            if (swResult.containsKey("hasSensitive") && (Boolean) swResult.get("hasSensitive")) {
+                throw new BusinessException("消息包含敏感词，已被拦截");
+            }
         }
 
         // 持久化消息

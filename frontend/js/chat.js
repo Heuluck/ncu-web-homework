@@ -324,6 +324,15 @@ const ChatManager = {
       });
       if (res && res.code !== 200) {
         Utils.showToast(res?.message || '发送失败', 'error');
+        // 敏感词拦截等失败时回退输入框
+        if (ChatManager._lastSentText) {
+          const input = document.getElementById('messageInput');
+          if (input) {
+            input.value = ChatManager._lastSentText;
+            input.focus();
+          }
+          ChatManager._lastSentText = '';
+        }
         return;
       }
     }
@@ -333,6 +342,9 @@ const ChatManager = {
     const input = document.getElementById('messageInput');
     const content = input.value.trim();
     if (!content || !this.currentFriendId) return;
+
+    // 保存内容，敏感词拦截时可回退
+    ChatManager._lastSentText = content;
 
     this.sendMessage(content, 0, null);
 

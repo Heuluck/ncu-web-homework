@@ -14,6 +14,7 @@ import com.ncu.chat.model.entity.*;
 import com.ncu.chat.model.vo.*;
 import com.ncu.chat.service.GroupService;
 import com.ncu.chat.service.AiBotService;
+import com.ncu.chat.service.SensitiveWordService;
 import com.ncu.chat.websocket.WebSocketGroupController;
 import org.springframework.beans.BeanUtils;
 import org.springframework.context.annotation.Lazy;
@@ -38,6 +39,7 @@ public class GroupServiceImpl implements GroupService {
     private final WebSocketGroupController webSocketGroupController;
     private final SimpMessagingTemplate messagingTemplate;
     private final AiBotService aiBotService;
+    private final SensitiveWordService sensitiveWordService;
 
     // 手动构造函数，添加 @Lazy 解决循环依赖
     public GroupServiceImpl(ChatGroupMapper chatGroupMapper,
@@ -47,7 +49,8 @@ public class GroupServiceImpl implements GroupService {
                             AiBotMapper aiBotMapper,
                             @Lazy WebSocketGroupController webSocketGroupController,
                             SimpMessagingTemplate messagingTemplate,
-                            @Lazy AiBotService aiBotService) {
+                            @Lazy AiBotService aiBotService,
+                            SensitiveWordService sensitiveWordService) {
         this.chatGroupMapper = chatGroupMapper;
         this.groupMemberMapper = groupMemberMapper;
         this.groupMessageMapper = groupMessageMapper;
@@ -56,6 +59,7 @@ public class GroupServiceImpl implements GroupService {
         this.webSocketGroupController = webSocketGroupController;
         this.messagingTemplate = messagingTemplate;
         this.aiBotService = aiBotService;
+        this.sensitiveWordService = sensitiveWordService;
     }
 
     // ==================== 群管理 ====================
@@ -406,6 +410,14 @@ public class GroupServiceImpl implements GroupService {
         if (member == null) throw new BusinessException("你不是群成员");
 
         System.out.println("[DEBUG] 发送群消息：groupId=" + dto.getGroupId() + ", content=" + dto.getContent() + ", messageType=" + dto.getMessageType() + ", fileUrl=" + dto.getFileUrl());
+
+        // 敏感词检测（仅对文本消息）
+        if (dto.getMessageType() == null || dto.getMessageType() == 0) {
+            Map<String, Object> swResult = sensitiveWordService.checkSensitiveWords(dto.getContent());
+            if (swResult.containsKey("hasSensitive") && (Boolean) swResult.get("hasSensitive")) {
+                throw new BusinessException("消息包含敏感词，已被拦截");
+            }
+        }
 
         GroupMessage msg = new GroupMessage();
         msg.setGroupId(dto.getGroupId());

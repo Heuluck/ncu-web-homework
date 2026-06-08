@@ -193,7 +193,9 @@
 .admin-modal{background:var(--bg-app);border-radius:var(--radius-2xl);padding:var(--space-8);width:90%;max-width:500px;max-height:85vh;overflow-y:auto;box-shadow:var(--shadow-lg);animation:scaleIn 300ms var(--ease-out) both}
 .admin-modal h3{font-size:var(--text-lg);font-weight:var(--font-bold);margin:0 0 var(--space-5)}
 .admin-modal label{display:block;font-size:var(--text-sm);font-weight:var(--font-medium);color:var(--text-main);margin-bottom:var(--space-2);margin-top:var(--space-4)}
-.admin-modal input[type="text"],.admin-modal textarea{width:100%;padding:var(--space-3);font-size:var(--text-sm);border:1px solid var(--border-strong);border-radius:var(--radius-md);background:var(--bg-app);color:var(--text-main);box-sizing:border-box}
+.admin-modal input,.admin-modal textarea,.admin-modal select{width:100%;padding:var(--space-3);font-size:var(--text-sm);border:1px solid var(--border-strong);border-radius:var(--radius-md);background:var(--bg-app);color:var(--text-main);box-sizing:border-box}
+.admin-modal input:focus,.admin-modal textarea:focus,.admin-modal select:focus{outline:none;border-color:var(--border-focus);box-shadow:0 0 0 3px rgba(37,37,37,0.08)}
+.admin-modal input[type="checkbox"]{width:auto;padding:0;margin-right:var(--space-2);vertical-align:middle}
 .admin-modal textarea{min-height:120px;resize:vertical}
 .admin-modal .modal-actions{display:flex;justify-content:flex-end;gap:var(--space-3);margin-top:var(--space-6)}
 .sensitive-test{margin-bottom:var(--space-6);padding:var(--space-5);background:var(--bg-surface);border-radius:var(--radius-lg)}

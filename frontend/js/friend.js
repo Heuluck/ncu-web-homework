@@ -449,18 +449,34 @@ const FriendManager = {
     },
 
     _ctxSendMessage() {
-        if (this.currentContextFriendId) {
+        const friendId = this.currentContextFriendId || this._profileFriendId;
+        if (friendId) {
+            // 关闭所有模态框
+            this._closeAnyModal();
+            // 同时关闭群成员面板
+            if (typeof GroupMemberPanel !== 'undefined') {
+                GroupMemberPanel.close();
+            }
             let fallbackInfo = null;
             for (const group of (this.groups || [])) {
-                const friend = (group.friends || []).find(f => f.friendId === this.currentContextFriendId);
+                const friend = (group.friends || []).find(f => f.friendId === friendId);
                 if (friend) {
                     fallbackInfo = { friendId: friend.friendId, nickname: friend.nickname, avatar: friend.avatar, onlineStatus: friend.onlineStatus };
                     break;
                 }
             }
+            // 如果不在好友列表中，使用资料弹窗缓存的信息
+            if (!fallbackInfo && this._profileUserInfo && this._profileUserInfo.id === friendId) {
+                fallbackInfo = {
+                    friendId: this._profileUserInfo.id,
+                    nickname: this._profileUserInfo.nickname,
+                    avatar: this._profileUserInfo.avatar,
+                    onlineStatus: this._profileUserInfo.status || 0
+                };
+            }
             GroupManager.currentGroupId = null;
             GroupManager.currentGroupInfo = null;
-            ChatManager.openChat(this.currentContextFriendId, fallbackInfo);
+            ChatManager.openChat(friendId, fallbackInfo);
             document.querySelector('.nav-item[data-tab="recent"]')?.click();
         }
     },
@@ -606,13 +622,17 @@ const FriendManager = {
 
     async openProfileModal(friendId) {
         this._closeAnyModal();
+        this._profileFriendId = friendId;
         // 使用搜索接口获取单个用户信息
         const res = await API.get(`/api/user/info/${friendId}`);
         if (!res || res.code !== 200 || !res.data) {
             Utils.showToast('获取用户信息失败', 'error');
+            this._profileFriendId = null;
             return;
         }
         const user = res.data;
+        // 缓存用户信息，供 _ctxSendMessage 使用
+        this._profileUserInfo = user;
         const avatarSrc = Utils.getAvatarUrl(user.avatar, `user-${user.id}`);
         const statusText = Utils.getStatusText(user.status);
         const statusClass = Utils.getStatusClass(user.status);
@@ -629,7 +649,7 @@ const FriendManager = {
                     </button>
                 </div>
                 <div class="modal-body" style="text-align: center;">
-                    <div class="avatar-wrapper" style="display: inline-block; margin-bottom: 12px;">
+                    <div class="avatar-wrapper" style="display: inline-block; margin-bottom: 12px; cursor: pointer; position: relative;" onclick="GroupManager.showImagePreview('${avatarSrc.replace(/'/g, "\\'")}')" title="查看大图">
                         <img src="${avatarSrc}" class="avatar avatar-lg" style="width: 80px; height: 80px;">
                         <span class="status-indicator ${statusClass}" style="position: absolute; bottom: 2px; right: 2px;"></span>
                     </div>
@@ -637,11 +657,12 @@ const FriendManager = {
                     <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 8px;">@${Utils.escapeHtml(user.username)} · ${statusText}</div>
                     ${user.signature ? `<div style="font-size: 13px; color: var(--text-muted); padding: 8px; background: var(--bg-surface); border-radius: var(--radius-md);">${Utils.escapeHtml(user.signature)}</div>` : ''}
                 </div>
+                ${user.id !== Auth.getUserId() ? `
                 <div class="modal-footer">
-                    <button class="btn btn-primary" onclick="FriendManager._ctxSendMessage(); FriendManager.closeProfileModal();">
+                    <button class="btn btn-primary" onclick="FriendManager._ctxSendMessage();">
                         <i data-lucide="message-circle" style="width: 14px; height: 14px;"></i> 发消息
                     </button>
-                </div>
+                </div>` : ''}
             </div>`;
         document.body.appendChild(overlay);
         overlay.addEventListener('click', (e) => { if (e.target === overlay) this.closeProfileModal(); });
@@ -650,6 +671,7 @@ const FriendManager = {
 
     closeProfileModal() {
         document.getElementById('profileModal')?.remove();
+        this._profileFriendId = null;
     },
 
     // ==================== 分组管理弹窗 ====================
@@ -846,6 +868,8 @@ const FriendManager = {
         this.closeProfileModal();
         this.closeGroupManageModal();
         this._closeContextMenu();
+        // 同时关闭群成员右键菜单
+        document.getElementById('memberContextMenu')?.remove();
     },
 
     // WebSocket 实时接收好友申请

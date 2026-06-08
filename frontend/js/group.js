@@ -291,8 +291,10 @@ const GroupManager = {
         const botClass = isBot ? ' message-bot' : '';
         if (isSelf) {
             return `<div class="message self${botClass}"><div class="message-content">${skipBubble ? contentHtml : `<div class="message-bubble">${contentHtml}</div>`}<div class="message-meta"><span class="message-time">${time}</span></div></div></div>`;
+        } else if (isBot) {
+            return `<div class="message message-bot"><img src="${avatarSrc}" class="avatar avatar-sm" onerror="this.src='${BotManager.getDefaultBotAvatar('bot')}'"><div class="message-content"><div class="message-header"><span class="message-sender">${Utils.escapeHtml(senderName)}</span><span class="message-time">${time}</span></div>${skipBubble ? contentHtml : `<div class="message-bubble">${contentHtml}</div>`}</div></div>`;
         } else {
-            return `<div class="message${botClass}"><img src="${avatarSrc}" class="avatar avatar-sm" onerror="this.src='${BotManager.getDefaultBotAvatar('bot')}'"><div class="message-content"><div class="message-header"><span class="message-sender">${Utils.escapeHtml(senderName)}</span><span class="message-time">${time}</span></div>${skipBubble ? contentHtml : `<div class="message-bubble">${contentHtml}</div>`}</div></div>`;
+            return `<div class="message"><img src="${avatarSrc}" class="avatar avatar-sm" onerror="this.src='${BotManager.getDefaultBotAvatar('bot')}'" onclick="GroupManager._openSenderProfile(${msg.senderId})" style="cursor:pointer;" title="查看资料"><div class="message-content"><div class="message-header"><span class="message-sender">${Utils.escapeHtml(senderName)}</span><span class="message-time">${time}</span></div>${skipBubble ? contentHtml : `<div class="message-bubble">${contentHtml}</div>`}</div></div>`;
         }
     },
 
@@ -640,6 +642,16 @@ const GroupManager = {
             BotModal.show(this.currentGroupId);
         } else {
             Utils.showToast('机器人功能加载中', 'warning');
+        }
+    },
+
+    /**
+     * 点击群聊消息中发送者头像，打开好友资料
+     * @param {number} senderId - 发送者用户 ID
+     */
+    _openSenderProfile(senderId) {
+        if (typeof FriendManager !== 'undefined') {
+            FriendManager.openProfileModal(senderId);
         }
     },
 

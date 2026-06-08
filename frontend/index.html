@@ -505,11 +505,17 @@
     </div>
   </aside>
 
+  <!-- 移动端侧边栏遮罩 -->
+  <div class="sidebar-backdrop" onclick="hideMobileSidebar()"></div>
+
   <!-- 聊天区域 -->
   <main class="chat-area">
     <!-- 聊天头部 -->
     <div class="chat-header" id="chatHeader" style="display: none;">
       <div class="chat-header-info">
+        <button class="btn-icon mobile-back-btn" onclick="showMobileSidebar()">
+          <i data-lucide="arrow-left"></i>
+        </button>
         <div class="avatar-wrapper">
           <img id="chatAvatar" src="" alt="" class="avatar avatar-md">
           <span id="chatStatus" class="status-indicator"></span>
@@ -1790,6 +1796,45 @@
       pasteImageConfirm.click();
     }
   }, true); // 捕获阶段，确保在 messageInput 的 keydown 之前拦截
+
+  // ===== 移动端侧边栏切换 =====
+  function showMobileSidebar() {
+    const sidebar = document.querySelector('.app-sidebar');
+    const backdrop = document.querySelector('.sidebar-backdrop');
+    sidebar.classList.remove('sidebar-has-chat');
+    sidebar.classList.add('sidebar-open');
+    backdrop.classList.remove('active');
+  }
+
+  function hideMobileSidebar() {
+    const sidebar = document.querySelector('.app-sidebar');
+    const backdrop = document.querySelector('.sidebar-backdrop');
+    sidebar.classList.remove('sidebar-open');
+    backdrop.classList.remove('active');
+  }
+
+  // 选择会话后自动隐藏侧边栏（切到聊天界面）
+  document.addEventListener('click', function(e) {
+    const listItem = e.target.closest('.list-item');
+    if (listItem && window.innerWidth <= 768) {
+      hideMobileSidebar();
+    }
+  });
+
+  // 窄屏默认显示联系人列表（隐藏空聊天界面）
+  if (window.innerWidth <= 768) {
+    showMobileSidebar();
+  }
+
+  // 窗口大小变化时，宽屏自动恢复侧边栏
+  window.addEventListener('resize', function() {
+    if (window.innerWidth > 768) {
+      const sidebar = document.querySelector('.app-sidebar');
+      const backdrop = document.querySelector('.sidebar-backdrop');
+      sidebar.classList.remove('sidebar-open', 'sidebar-has-chat');
+      backdrop.classList.remove('active');
+    }
+  });
 </script>
 </body>
 </html>

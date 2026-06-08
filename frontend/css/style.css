@@ -508,3 +508,279 @@
 .invite-selected-chip{display:inline-flex;align-items:center;gap:4px;padding:3px 8px 3px 4px;background:var(--bg-surface);border:1px solid var(--border-subtle);border-radius:var(--radius-full);font-size:11px;margin:2px;white-space:nowrap}
 .invite-chip-remove{cursor:pointer;display:flex;align-items:center;color:var(--text-muted);transition:color var(--transition-fast)}
 .invite-chip-remove:hover{color:var(--color-danger)}
+
+/* ============================================
+   Mobile Responsive Design
+   ============================================ */
+/* Mobile menu toggle - hidden on desktop */
+.mobile-back-btn,
+.sidebar-backdrop {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  /* ===== Sidebar: slide-in overlay ===== */
+  .mobile-back-btn {
+    display: flex !important;
+  }
+  .sidebar-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    z-index: 199;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 300ms var(--ease-out);
+  }
+  .sidebar-backdrop.active {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  .app-sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 100%;
+    max-width: none;
+    z-index: 200;
+    transform: translateX(-100%);
+    transition: transform 300ms var(--ease-out);
+    box-shadow: var(--shadow-lg);
+  }
+  .app-sidebar.sidebar-open {
+    transform: translateX(0);
+  }
+  /* 有聊天时侧边栏作为浮层，限制宽度 */
+  .app-sidebar.sidebar-has-chat {
+    max-width: 320px;
+  }
+  /* 无聊天时遮罩不可见 */
+  .sidebar-backdrop {
+    display: none !important;
+  }
+  .app-sidebar.sidebar-has-chat ~ .sidebar-backdrop {
+    display: block !important;
+  }
+
+  .chat-area {
+    width: 100%;
+  }
+
+  /* ===== Chat area ===== */
+  .chat-messages {
+    padding: var(--space-4) var(--space-3);
+  }
+  /* 窄屏无聊天时隐藏空状态提示文本（左侧列表不可见，提示无意义） */
+  .empty-state-text {
+    display: none;
+  }
+  .empty-state-title {
+    font-size: var(--text-sm);
+  }
+  .chat-input-area {
+    padding: var(--space-3) var(--space-3);
+  }
+  .message {
+    max-width: 92%;
+  }
+  .chat-input-box {
+    padding: var(--space-2) var(--space-3);
+  }
+
+  /* ===== Auth pages ===== */
+  .auth-layout {
+    padding: var(--space-4);
+  }
+  .auth-container {
+    max-width: 100%;
+  }
+  .auth-card {
+    padding: var(--space-6);
+  }
+  .auth-header-title {
+    font-size: var(--text-xl);
+  }
+
+  /* ===== Admin page ===== */
+  .admin-layout {
+    flex-direction: column;
+  }
+  .admin-sidebar {
+    width: 100%;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    padding: var(--space-3) var(--space-4);
+    border-right: none;
+    border-bottom: 1px solid var(--border-subtle);
+    overflow-x: auto;
+    gap: var(--space-1);
+  }
+  .admin-logo {
+    margin-bottom: 0;
+    margin-right: var(--space-3);
+    font-size: var(--text-base);
+    white-space: nowrap;
+  }
+  .admin-nav {
+    flex-direction: row;
+    flex-wrap: nowrap;
+    gap: var(--space-1);
+    overflow-x: auto;
+    padding-bottom: 2px;
+  }
+  .admin-nav-item {
+    white-space: nowrap;
+    padding: var(--space-2) var(--space-3);
+    font-size: var(--text-xs);
+  }
+  .admin-main {
+    padding: var(--space-4);
+  }
+  .admin-header h2 {
+    font-size: var(--text-lg);
+    margin-bottom: var(--space-4);
+  }
+  .admin-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .admin-search {
+    width: 100%;
+    min-width: 0;
+  }
+  .admin-table {
+    font-size: var(--text-xs);
+  }
+  .admin-table th,
+  .admin-table td {
+    padding: var(--space-2);
+    white-space: nowrap;
+  }
+  .admin-modal {
+    max-width: 95%;
+    padding: var(--space-5);
+    border-radius: var(--radius-xl);
+  }
+  .admin-back {
+    padding: var(--space-2);
+  }
+
+  /* ===== Profile page ===== */
+  .profile-page {
+    padding: var(--space-4);
+  }
+  .profile-card {
+    padding: var(--space-6);
+  }
+
+  /* ===== Modals ===== */
+  .modal-container {
+    max-width: 95%;
+    border-radius: var(--radius-lg);
+    max-height: 90vh;
+  }
+  .modal-body {
+    padding: var(--space-4);
+  }
+  .modal-header {
+    padding: var(--space-4);
+  }
+  .modal-footer {
+    padding: var(--space-3) var(--space-4);
+  }
+  .chat-history-modal-content {
+    width: 95%;
+    height: 85vh;
+    border-radius: var(--radius-xl);
+  }
+  .chat-history-sidebar {
+    display: none;
+  }
+  .chat-history-main {
+    width: 100%;
+  }
+  .chat-history-messages {
+    padding: var(--space-3) var(--space-4);
+  }
+
+  /* ===== Emoji picker ===== */
+  .emoji-picker-container {
+    width: 280px;
+    max-height: 260px;
+    right: 0;
+    left: auto;
+  }
+
+  /* ===== Image preview ===== */
+  .image-preview-toolbar {
+    top: 12px;
+    padding: var(--space-2);
+    gap: var(--space-1);
+  }
+  .image-preview-tool {
+    width: 36px;
+    height: 36px;
+  }
+  .image-preview-img {
+    max-width: 95%;
+  }
+
+  /* ===== Invite modal ===== */
+  .invite-left-panel {
+    width: 120px;
+  }
+
+  /* ===== Cards ===== */
+  .card {
+    border-radius: var(--radius-lg);
+  }
+
+  /* ===== Search ===== */
+  .search-wrapper .input-control {
+    height: 36px;
+    font-size: var(--text-sm);
+  }
+
+  /* ===== Sidebar items ===== */
+  .sidebar-content {
+    padding: var(--space-1) var(--space-2);
+  }
+  .list-item {
+    padding: var(--space-2) var(--space-3);
+  }
+
+  /* ===== Announcement ===== */
+  .announcement-bar {
+    padding: var(--space-1) var(--space-3);
+  }
+
+  /* ===== Call overlay ===== */
+  .call-avatar {
+    width: 72px;
+    height: 72px;
+  }
+  .call-name {
+    font-size: var(--text-lg);
+  }
+  .call-actions {
+    gap: var(--space-4);
+  }
+  .call-btn {
+    width: 48px;
+    height: 48px;
+  }
+  .call-btn svg {
+    width: 24px;
+    height: 24px;
+  }
+
+  /* ===== Voice recording indicator ===== */
+  .voice-recording-indicator {
+    bottom: 100px;
+    padding: var(--space-2) var(--space-4);
+  }
+}

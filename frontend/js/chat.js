@@ -81,6 +81,9 @@ const ChatManager = {
     // 从权威来源获取好友信息（不再直接从混合了群聊的 conversations 列表取）
     this.currentFriendInfo = this._getFriendInfo(friendId, fallbackInfo);
 
+    // 窄屏标记为有聊天状态（侧边栏变为浮层，可关闭）
+    document.querySelector('.app-sidebar')?.classList.add('sidebar-has-chat');
+
     // 使用 ChatHeaderController 统一管理头部渲染
     const headerToken = ChatHeaderController.initSession('private', friendId, this.currentFriendInfo);
     if (token === this._sessionToken) ChatHeaderController.renderPrivate(headerToken);

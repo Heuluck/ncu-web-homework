@@ -92,6 +92,9 @@ const GroupManager = {
             ChatManager.currentFriendInfo = null;
         }
         
+        // 窄屏标记为有聊天状态（侧边栏变为浮层，可关闭）
+        document.querySelector('.app-sidebar')?.classList.add('sidebar-has-chat');
+        
         this.currentGroupId = groupId;
         this.currentPage = 1;
         this.hasMore = true;

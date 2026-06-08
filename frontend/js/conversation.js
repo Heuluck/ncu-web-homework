@@ -93,6 +93,24 @@ const ConversationManager = {
 
     this.conversations = merged;
     this.renderList();
+    this.updateRecentTabBadge();
+  },
+
+  /** 更新「最近」tab 的未读气泡 */
+  updateRecentTabBadge() {
+    const badge = document.getElementById('recentUnreadBadge');
+    if (!badge) return;
+    const total = this.conversations.reduce((sum, c) => {
+      // 免打扰的不计入气泡
+      if (this.isMuted(c._type, c._id)) return sum;
+      return sum + (c.unreadCount || 0);
+    }, 0);
+    if (total > 0) {
+      badge.textContent = total > 99 ? '99+' : total;
+      badge.style.display = '';
+    } else {
+      badge.style.display = 'none';
+    }
   },
 
   renderList() {
@@ -245,6 +263,7 @@ const ConversationManager = {
       return;
     }
     this.renderList();
+    this.updateRecentTabBadge();
   },
 
   addOrUpdateGroupConversation(msg) {
@@ -270,6 +289,7 @@ const ConversationManager = {
       return;
     }
     this.renderList();
+    this.updateRecentTabBadge();
   },
 
   clearUnread(friendId) {
@@ -277,6 +297,7 @@ const ConversationManager = {
     if (conv) {
       conv.unreadCount = 0;
       this.renderList();
+      this.updateRecentTabBadge();
     }
   },
 
@@ -285,6 +306,7 @@ const ConversationManager = {
     if (conv) {
       conv.unreadCount = 0;
       this.renderList();
+      this.updateRecentTabBadge();
     }
   },
 

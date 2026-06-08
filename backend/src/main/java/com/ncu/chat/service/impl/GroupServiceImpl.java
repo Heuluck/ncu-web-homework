@@ -209,6 +209,17 @@ public class GroupServiceImpl implements GroupService {
             }
         }
 
+        // 批量统计各群未读消息数
+        Map<Long, Long> unreadMap = new HashMap<>();
+        if (!validGroupIds.isEmpty()) {
+            List<Map<String, Object>> unreadRows = groupMessageMapper.countUnreadByGroupIds(userId, validGroupIds);
+            for (Map<String, Object> row : unreadRows) {
+                Long gid = ((Number) row.get("group_id")).longValue();
+                Long cnt = ((Number) row.get("cnt")).longValue();
+                unreadMap.put(gid, cnt);
+            }
+        }
+
         List<GroupConversationVO> result = new ArrayList<>();
         for (Long groupId : validGroupIds) {
             if (!memberGroupIds.contains(groupId)) continue;
@@ -221,6 +232,7 @@ public class GroupServiceImpl implements GroupService {
             vo.setGroupName(group.getName());
             vo.setGroupAvatar(group.getAvatar());
             vo.setAnnouncement(group.getAnnouncement());
+            vo.setUnreadCount(unreadMap.getOrDefault(groupId, 0L).intValue());
             if (lastMsg != null) {
                 // emoji 表情消息：显示表情符号而非 [图片]
                 if (lastMsg.getMessageType() != null && lastMsg.getMessageType() == 1

@@ -1051,6 +1051,10 @@
       ChatManager._markAsRead(ChatManager._pendingReadFriendId);
       ChatManager._pendingReadFriendId = null;
     }
+    if (typeof GroupManager !== 'undefined' && GroupManager._pendingReadGroupId) {
+      GroupManager._markGroupRead(GroupManager._pendingReadGroupId);
+      GroupManager._pendingReadGroupId = null;
+    }
   }
   window.addEventListener('focus', handlePageFocus);
   document.addEventListener('visibilitychange', () => {

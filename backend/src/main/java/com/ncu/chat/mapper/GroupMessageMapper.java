@@ -7,6 +7,7 @@ import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 
 import java.util.List;
+import java.util.Map;
 
 @Mapper
 public interface GroupMessageMapper extends BaseMapper<GroupMessage> {
@@ -25,4 +26,19 @@ public interface GroupMessageMapper extends BaseMapper<GroupMessage> {
             ") t ON gm.id = t.max_id" +
             "</script>")
     List<GroupMessage> getLastMessagesByGroupIds(@Param("groupIds") List<Long> groupIds);
+
+    /**
+     * 批量统计群未读消息数（消息时间晚于 last_read_time）
+     */
+    @Select("<script>" +
+            "SELECT gm.group_id, COUNT(*) AS cnt " +
+            "FROM group_message gm " +
+            "JOIN group_member gmb ON gm.group_id = gmb.group_id AND gmb.user_id = #{userId} AND gmb.deleted = 0 " +
+            "WHERE gm.group_id IN " +
+            "  <foreach collection='groupIds' item='gid' open='(' separator=',' close=')'>#{gid}</foreach>" +
+            "  AND gm.create_time > gmb.last_read_time " +
+            "  AND gm.sender_id != #{userId} " +
+            "GROUP BY gm.group_id" +
+            "</script>")
+    List<Map<String, Object>> countUnreadByGroupIds(@Param("userId") Long userId, @Param("groupIds") List<Long> groupIds);
 }

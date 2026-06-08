@@ -166,6 +166,11 @@ const WebSocketManager = {
     this.stompClient.send('/app/chat.read', {}, JSON.stringify({ friendId }));
   },
 
+  sendGroupReadNotification(groupId) {
+    if (!this.stompClient || !this.connected) return;
+    this.stompClient.send('/app/group.read', {}, JSON.stringify({ groupId }));
+  },
+
   onMessage(cb) { this._messageCallbacks.push(cb); },
   onStatusChange(cb) { this._statusCallbacks.push(cb); },
   onConnected(cb) { this._connectCallbacks.push(cb); },

@@ -10,6 +10,7 @@ const GroupManager = {
     pageSize: 20,
     hasMore: true,
     loading: false,
+    _pendingReadGroupId: null,
 
     // 加载我的群列表
     async loadMyGroups() {
@@ -356,14 +357,18 @@ const GroupManager = {
     },
 
     receiveGroupMessage(msg) {
-        console.log('[群聊] 收到消息:', msg);
-        console.log('[群聊] messageType:', msg.messageType, 'fileUrl:', msg.fileUrl, 'content:', msg.content);
         if (this.currentGroupId === msg.groupId) {
             this._appendGroupBubble(msg);
             this.scrollToBottom();
+            if (msg.senderId !== Auth.getUserId()) {
+                if (document.hasFocus() && !document.hidden) {
+                    this._markGroupRead(msg.groupId);
+                } else {
+                    this._pendingReadGroupId = msg.groupId;
+                }
+            }
         }
         this._updateGroupInList(msg);
-        // 同步到最近会话列表
         if (typeof ConversationManager !== 'undefined') {
             ConversationManager.addOrUpdateGroupConversation(msg);
         }

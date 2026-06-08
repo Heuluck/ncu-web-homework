@@ -415,7 +415,7 @@
     }
     .at-mention-item .avatar { width: 24px; height: 24px; }
   </style>
-  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="/js/lucide.min.js"></script>
 </head>
 <body>
 <div class="app-layout">
@@ -1830,13 +1830,19 @@
     showMobileSidebar();
   }
 
-  // 窗口大小变化时，宽屏自动恢复侧边栏
+  // 窗口大小变化时，宽屏恢复侧边栏，窄屏确保联系人列表可见
   window.addEventListener('resize', function() {
+    const sidebar = document.querySelector('.app-sidebar');
+    const backdrop = document.querySelector('.sidebar-backdrop');
     if (window.innerWidth > 768) {
-      const sidebar = document.querySelector('.app-sidebar');
-      const backdrop = document.querySelector('.sidebar-backdrop');
       sidebar.classList.remove('sidebar-open', 'sidebar-has-chat');
       backdrop.classList.remove('active');
+    } else {
+      const hasChat = (typeof ChatManager !== 'undefined' && ChatManager.currentFriendId)
+                   || (typeof GroupManager !== 'undefined' && GroupManager.currentGroupId);
+      if (!hasChat) {
+        showMobileSidebar();
+      }
     }
   });
 </script>

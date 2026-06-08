@@ -114,7 +114,7 @@ db/               — 数据库迁移脚本
      <link rel="stylesheet" href="/css/variables.css">
      <link rel="stylesheet" href="/css/components.css">
      <link rel="stylesheet" href="/css/style.css">
-     <script src="https://unpkg.com/lucide@latest"></script>
+     <script src="/js/lucide.min.js"></script>
    </head>
    <body>
      <!-- 内容 -->

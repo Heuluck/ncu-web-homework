@@ -99,6 +99,9 @@ const GroupManager = {
         this.currentGroupId = groupId;
         this.currentPage = 1;
         this.hasMore = true;
+        // 重置去重集合 + 开启加载缓冲
+        this._renderedMsgIds = new Set();
+        this._pendingMessages = [];
 
         const infoRes = await API.get(`/api/group/info/${groupId}`);
         if (token !== (ChatManager?._sessionToken ?? 0)) return;
@@ -126,7 +129,9 @@ const GroupManager = {
         messagesEl.innerHTML = '<div class="chat-loading"><div class="spinner"></div></div>';
 
         await this.loadGroupMessages(groupId, 1, true);
-        if (token !== (ChatManager?._sessionToken ?? 0)) return;
+        if (token !== (ChatManager?._sessionToken ?? 0)) return;  // 被新会话取代
+        // 回放加载期间缓冲的实时消息（防止被 _renderGroupMessages 覆盖丢失）
+        this._flushPendingGroupMessages(groupId);
         this._markGroupRead(groupId);
         this._clearGroupUnread(groupId);
         // 清除最近会话列表中的群聊未读
@@ -134,6 +139,28 @@ const GroupManager = {
             ConversationManager.clearGroupUnread(groupId);
             ConversationManager.refreshMuteBtn();
         }
+    },
+
+    /**
+     * 回放 openGroupChat 期间通过 WebSocket 收到的缓冲消息
+     */
+    _flushPendingGroupMessages(groupId) {
+        const pending = this._pendingMessages;
+        this._pendingMessages = null;
+        if (!pending || pending.length === 0) return;
+
+        const myId = Auth.getUserId();
+        for (const msg of pending) {
+            if (msg.groupId !== groupId) continue;
+            // 去重：如果 loadGroupMessages 已渲染过则跳过
+            if (msg.id && this._renderedMsgIds && this._renderedMsgIds.has(msg.id)) continue;
+            this._appendGroupBubble(msg);
+            if (msg.id) {
+                if (!this._renderedMsgIds) this._renderedMsgIds = new Set();
+                this._renderedMsgIds.add(msg.id);
+            }
+        }
+        this.scrollToBottom();
     },
 
     _renderGroupHeader() {
@@ -172,7 +199,14 @@ const GroupManager = {
 
         let html = '';
         if (this.hasMore) html += '<div class="load-more-wrapper"><button class="btn btn-ghost btn-sm" id="loadMoreGroupBtn">加载更多</button></div>';
-        messages.forEach(msg => { html += this._renderGroupBubble(msg, myId); });
+        messages.forEach(msg => {
+            html += this._renderGroupBubble(msg, myId);
+            // 记录已渲染消息 ID（供 _flushPendingGroupMessages 去重）
+            if (msg.id) {
+                if (!this._renderedMsgIds) this._renderedMsgIds = new Set();
+                this._renderedMsgIds.add(msg.id);
+            }
+        });
         messagesEl.innerHTML = html;
 
         const loadMoreBtn = document.getElementById('loadMoreGroupBtn');
@@ -190,7 +224,13 @@ const GroupManager = {
 
         let html = '';
         if (this.hasMore) html += '<div class="load-more-wrapper"><button class="btn btn-ghost btn-sm" id="loadMoreGroupBtn">加载更多</button></div>';
-        messages.forEach(msg => { html += this._renderGroupBubble(msg, Auth.getUserId()); });
+        messages.forEach(msg => {
+            html += this._renderGroupBubble(msg, Auth.getUserId());
+            if (msg.id) {
+                if (!this._renderedMsgIds) this._renderedMsgIds = new Set();
+                this._renderedMsgIds.add(msg.id);
+            }
+        });
         messagesEl.insertAdjacentHTML('afterbegin', html);
         messagesEl.scrollTop = messagesEl.scrollHeight - prevScrollHeight;
 
@@ -357,6 +397,22 @@ const GroupManager = {
     },
 
     receiveGroupMessage(msg) {
+        // 加载缓冲模式：openGroupChat 正在异步加载历史，暂存待回放
+        if (this._pendingMessages) {
+            if (msg.id) {
+                if (!this._renderedMsgIds) this._renderedMsgIds = new Set();
+                if (this._renderedMsgIds.has(msg.id)) return;
+                this._renderedMsgIds.add(msg.id);
+            }
+            this._pendingMessages.push(msg);
+            // 仍更新群列表和会话列表
+            this._updateGroupInList(msg);
+            if (typeof ConversationManager !== 'undefined') {
+                ConversationManager.addOrUpdateGroupConversation(msg);
+            }
+            return;
+        }
+
         if (this.currentGroupId === msg.groupId) {
             this._appendGroupBubble(msg);
             this.scrollToBottom();

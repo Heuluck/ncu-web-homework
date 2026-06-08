@@ -77,6 +77,9 @@ const ChatManager = {
     this.currentFriendId = friendId;
     this.currentPage = 1;
     this.hasMore = true;
+    // 重置去重集合（避免跨会话污染），开启加载缓冲
+    this._renderedMsgIds = new Set();
+    this._pendingMessages = [];
 
     // 从权威来源获取好友信息（不再直接从混合了群聊的 conversations 列表取）
     this.currentFriendInfo = this._getFriendInfo(friendId, fallbackInfo);
@@ -94,10 +97,33 @@ const ChatManager = {
     messagesEl.innerHTML = '<div class="chat-loading"><div class="spinner"></div></div>';
 
     await this.loadHistory(friendId, 1, true);
-    if (token !== this._sessionToken) return;
+    if (token !== this._sessionToken) return;  // 被新会话取代，_pendingMessages 已由新调用重置
+    // 回放加载期间缓冲的实时消息（防止被 _renderMessages 覆盖丢失）
+    this._flushPendingMessages(friendId);
     this._markAsRead(friendId);
     ConversationManager.clearUnread(friendId);
     ConversationManager.refreshMuteBtn();
+  },
+
+  /**
+   * 回放 openChat 期间通过 WebSocket 收到但尚未渲染的消息
+   * 解决"退出瞬间收到消息再回来会漏掉"的竞态问题
+   */
+  _flushPendingMessages(friendId) {
+    const pending = this._pendingMessages;
+    this._pendingMessages = null;
+    if (!pending || pending.length === 0) return;
+
+    const myId = Auth.getUserId();
+    for (const msg of pending) {
+      const msgFriendId = msg.senderId === myId ? msg.receiverId : msg.senderId;
+      if (msgFriendId !== friendId) continue;
+      // 如果消息已在 loadHistory 中渲染过则跳过（去重）
+      if (msg.id && this._renderedMsgIds.has(msg.id)) continue;
+      this._appendBubble(msg);
+      if (msg.id) this._renderedMsgIds.add(msg.id);
+    }
+    this.scrollToBottom();
   },
 
   _renderHeader() {
@@ -175,6 +201,8 @@ const ChatManager = {
 
     messages.forEach(msg => {
       html += this._renderBubble(msg);
+      // 记录已渲染消息 ID（供 _flushPendingMessages 去重）
+      if (msg.id) this._renderedMsgIds.add(msg.id);
     });
 
     messagesEl.innerHTML = html;
@@ -207,6 +235,7 @@ const ChatManager = {
 
     messages.forEach(msg => {
       html += this._renderBubble(msg);
+      if (msg.id) this._renderedMsgIds.add(msg.id);
     });
 
     messagesEl.insertAdjacentHTML('afterbegin', html);
@@ -393,6 +422,22 @@ const ChatManager = {
   },
 
   receiveMessage(msg) {
+    // 加载缓冲模式：openChat 正在异步加载历史，暂存消息待加载完成后回放
+    if (this._pendingMessages) {
+      // 去重：避免同一消息在缓冲+回放时重复
+      if (msg.id) {
+        if (this._renderedMsgIds.has(msg.id)) return;
+        this._renderedMsgIds.add(msg.id);
+      }
+      this._pendingMessages.push(msg);
+      // 仍更新会话列表（未读计数等）
+      const myId = Auth.getUserId();
+      const convMsg = { ...msg };
+      if (convMsg.messageType === 3) convMsg.content = '[语音]';
+      ConversationManager.addOrUpdateConversation(convMsg);
+      return;
+    }
+
     // 去重：防止同一条消息渲染两次
     if (msg.id && this._renderedMsgIds && this._renderedMsgIds.has(msg.id)) return;
     if (!this._renderedMsgIds) this._renderedMsgIds = new Set();

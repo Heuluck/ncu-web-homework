@@ -287,6 +287,16 @@
 .alert-success{background:#ecfdf5;color:#065f46;border:1px solid #a7f3d0}
 .alert-error{background:#fef2f2;color:#991b1b;border:1px solid #fecaca}
 
+/* 好友列表操作栏内部滚动，避免撑破外层容器 */
+#friendList > div:first-child {
+  overflow-x: auto;
+  flex-shrink: 0;
+  -webkit-overflow-scrolling: touch;
+}
+#friendList > div:first-child::-webkit-scrollbar {
+  height: 0;
+}
+
 /* === Chat 补充样式 === */
 .btn-sm{height:32px;padding:var(--space-1) var(--space-4);font-size:var(--text-xs)}
 .list-item-preview{display:flex;align-items:center;gap:var(--space-2)}

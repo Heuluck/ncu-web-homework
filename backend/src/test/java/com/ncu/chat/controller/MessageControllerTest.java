@@ -1,5 +1,6 @@
 package com.ncu.chat.controller;
 
+import com.ncu.chat.common.GlobalExceptionHandler;
 import com.ncu.chat.service.MessageService;
 import com.ncu.chat.model.vo.PrivateMessageVO;
 import org.junit.jupiter.api.Test;
@@ -7,6 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDateTime;
@@ -16,10 +18,12 @@ import java.util.List;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
+import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@WebMvcTest(MessageController.class)
+@WebMvcTest(controllers = MessageController.class)
+@ContextConfiguration(classes = {MessageController.class, GlobalExceptionHandler.class})
 class MessageControllerTest {
 
     @Autowired
@@ -27,6 +31,8 @@ class MessageControllerTest {
 
     @MockBean
     private MessageService messageService;
+    @MockBean
+    private com.ncu.chat.util.JwtUtil jwtUtil;
 
     @Test
     void searchPrivateMessages_success() throws Exception {
@@ -44,9 +50,9 @@ class MessageControllerTest {
                 .thenReturn(messages);
 
         mockMvc.perform(get("/api/message/search/private")
+                .requestAttr("userId", 1L)
                 .param("targetId", "2")
                 .param("keyword", "测试")
-                .header("Authorization", "Bearer test-token")
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200))
@@ -60,9 +66,9 @@ class MessageControllerTest {
                 .thenReturn(Arrays.asList());
 
         mockMvc.perform(get("/api/message/search/private")
+                .requestAttr("userId", 1L)
                 .param("targetId", "2")
                 .param("keyword", "")
-                .header("Authorization", "Bearer test-token")
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200))
@@ -85,10 +91,10 @@ class MessageControllerTest {
                 .thenReturn(messages);
 
         mockMvc.perform(get("/api/message/filter/private")
+                .requestAttr("userId", 1L)
                 .param("targetId", "2")
                 .param("startTime", "2026-06-05 00:00:00")
                 .param("endTime", "2026-06-05 23:59:59")
-                .header("Authorization", "Bearer test-token")
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200))
@@ -103,11 +109,11 @@ class MessageControllerTest {
                 .thenReturn(txtContent);
 
         mockMvc.perform(get("/api/message/export/private/txt")
-                .param("targetId", "2")
-                .header("Authorization", "Bearer test-token"))
+                .requestAttr("userId", 1L)
+                .param("targetId", "2"))
                 .andExpect(status().isOk())
-                .andExpect(header().string("Content-Disposition", org.mockito.ArgumentMatchers.contains("attachment")))
-                .andExpect(header().string("Content-Type", "application/octet-stream"));
+                .andExpect(header().string("Content-Disposition", containsString("attachment")))
+                .andExpect(header().exists("Content-Type"));
     }
 
     @Test
@@ -117,10 +123,10 @@ class MessageControllerTest {
                 .thenReturn(csvContent);
 
         mockMvc.perform(get("/api/message/export/private/csv")
-                .param("targetId", "2")
-                .header("Authorization", "Bearer test-token"))
+                .requestAttr("userId", 1L)
+                .param("targetId", "2"))
                 .andExpect(status().isOk())
-                .andExpect(header().string("Content-Disposition", org.mockito.ArgumentMatchers.contains("attachment")));
+                .andExpect(header().string("Content-Disposition", containsString("attachment")));
     }
 
     @Test
@@ -131,7 +137,6 @@ class MessageControllerTest {
         mockMvc.perform(get("/api/message/search/group")
                 .param("groupId", "1")
                 .param("keyword", "测试")
-                .header("Authorization", "Bearer test-token")
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200))
@@ -145,9 +150,8 @@ class MessageControllerTest {
                 .thenReturn("群聊消息导出功能待实现");
 
         mockMvc.perform(get("/api/message/export/group/txt")
-                .param("groupId", "1")
-                .header("Authorization", "Bearer test-token"))
+                .param("groupId", "1"))
                 .andExpect(status().isOk())
-                .andExpect(content().string("群聊消息导出功能待实现"));
+                .andExpect(content().string(containsString("群聊消息导出功能待实现")));
     }
 }

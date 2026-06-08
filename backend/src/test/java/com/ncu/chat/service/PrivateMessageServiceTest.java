@@ -9,6 +9,7 @@ import com.ncu.chat.mapper.UserMapper;
 import com.ncu.chat.model.dto.PrivateMessageSendDTO;
 import com.baomidou.mybatisplus.core.MybatisConfiguration;
 import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
+import com.ncu.chat.model.entity.Friendship;
 import com.ncu.chat.model.entity.PrivateMessage;
 import com.ncu.chat.model.entity.User;
 import com.ncu.chat.model.vo.ConversationVO;
@@ -92,6 +93,12 @@ class PrivateMessageServiceTest {
     @DisplayName("发送消息 - 正常流程")
     void sendMessage_Success() {
         when(userMapper.selectById(1L)).thenReturn(sender);
+        Friendship friendship = new Friendship();
+        friendship.setId(1L);
+        friendship.setRequesterId(1L);
+        friendship.setReceiverId(2L);
+        friendship.setStatus(1);
+        when(friendshipMapper.findByUserPair(1L, 2L)).thenReturn(friendship);
         when(privateMessageMapper.insert(any(PrivateMessage.class))).thenAnswer(invocation -> {
             PrivateMessage pm = invocation.getArgument(0);
             pm.setId(1L);
@@ -118,6 +125,12 @@ class PrivateMessageServiceTest {
     @DisplayName("发送消息 - 带文件URL")
     void sendMessage_WithFileUrl() {
         when(userMapper.selectById(1L)).thenReturn(sender);
+        Friendship friendship = new Friendship();
+        friendship.setId(1L);
+        friendship.setRequesterId(1L);
+        friendship.setReceiverId(2L);
+        friendship.setStatus(1);
+        when(friendshipMapper.findByUserPair(1L, 2L)).thenReturn(friendship);
         when(privateMessageMapper.insert(any(PrivateMessage.class))).thenAnswer(invocation -> {
             PrivateMessage pm = invocation.getArgument(0);
             pm.setId(2L);

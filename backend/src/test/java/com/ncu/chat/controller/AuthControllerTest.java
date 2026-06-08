@@ -1,5 +1,7 @@
 package com.ncu.chat.controller;
 
+import com.ncu.chat.common.BusinessException;
+import com.ncu.chat.common.GlobalExceptionHandler;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ncu.chat.model.dto.UserLoginDTO;
 import com.ncu.chat.model.dto.UserRegisterDTO;
@@ -10,6 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.HashMap;
@@ -20,7 +23,8 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@WebMvcTest(AuthController.class)
+@WebMvcTest(controllers = AuthController.class)
+@ContextConfiguration(classes = {AuthController.class, GlobalExceptionHandler.class})
 class AuthControllerTest {
 
     @Autowired
@@ -100,7 +104,7 @@ class AuthControllerTest {
         dto.setPassword("password123");
 
         when(userService.login(any(UserLoginDTO.class)))
-                .thenThrow(new RuntimeException("用户名不存在"));
+                .thenThrow(new BusinessException("用户名不存在"));
 
         mockMvc.perform(post("/api/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -117,7 +121,7 @@ class AuthControllerTest {
         dto.setPassword("wrongpassword");
 
         when(userService.login(any(UserLoginDTO.class)))
-                .thenThrow(new RuntimeException("密码错误"));
+                .thenThrow(new BusinessException("密码错误"));
 
         mockMvc.perform(post("/api/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)

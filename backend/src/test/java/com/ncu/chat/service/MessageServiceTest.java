@@ -3,6 +3,9 @@ package com.ncu.chat.service;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.MybatisConfiguration;
 import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
+import com.ncu.chat.mapper.AiBotMapper;
+import com.ncu.chat.mapper.GroupMemberMapper;
+import com.ncu.chat.mapper.GroupMessageMapper;
 import com.ncu.chat.mapper.PrivateMessageMapper;
 import com.ncu.chat.mapper.UserMapper;
 import com.ncu.chat.model.entity.PrivateMessage;
@@ -38,7 +41,16 @@ class MessageServiceTest {
     private PrivateMessageMapper privateMessageMapper;
 
     @Mock
+    private GroupMessageMapper groupMessageMapper;
+
+    @Mock
+    private GroupMemberMapper groupMemberMapper;
+
+    @Mock
     private UserMapper userMapper;
+
+    @Mock
+    private AiBotMapper aiBotMapper;
 
     @InjectMocks
     private MessageServiceImpl messageService;

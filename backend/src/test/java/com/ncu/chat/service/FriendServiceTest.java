@@ -13,6 +13,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 
 import java.time.LocalDateTime;
 import java.util.Collections;
@@ -28,6 +29,7 @@ class FriendServiceTest {
     @Mock private FriendshipMapper friendshipMapper;
     @Mock private FriendGroupMapper friendGroupMapper;
     @Mock private UserMapper userMapper;
+    @Mock private SimpMessagingTemplate messagingTemplate;
     @InjectMocks private FriendServiceImpl friendService;
 
     private User user1, user2, user3;
@@ -128,6 +130,8 @@ class FriendServiceTest {
 
         Friendship existing = new Friendship();
         existing.setId(1L);
+        existing.setRequesterId(1L);
+        existing.setReceiverId(2L);
         existing.setStatus(2); // rejected
         when(friendshipMapper.findByUserPair(1L, 2L)).thenReturn(existing);
         when(userMapper.selectById(2L)).thenReturn(user2);
@@ -289,6 +293,7 @@ class FriendServiceTest {
         blocked.setRequesterId(1L);
         blocked.setReceiverId(2L);
         blocked.setStatus(3);
+        blocked.setRequesterBlocked(1);
         when(friendshipMapper.selectById(2L)).thenReturn(blocked);
         when(friendshipMapper.updateById(any())).thenReturn(1);
 

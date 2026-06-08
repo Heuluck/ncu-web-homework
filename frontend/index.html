@@ -338,6 +338,14 @@
       align-items: center;
       justify-content: center;
       z-index: 1000;
+      animation: fadeIn 200ms var(--ease-out) both;
+    }
+    .announcement-detail-overlay.closing {
+      animation: fadeOut 200ms var(--ease-out) forwards;
+      pointer-events: none;
+    }
+    .announcement-detail-overlay.closing .announcement-detail-box {
+      animation: scaleOut 200ms var(--ease-out) forwards;
     }
     .announcement-detail-box {
       background: var(--bg-app);
@@ -349,6 +357,7 @@
       display: flex;
       flex-direction: column;
       overflow: hidden;
+      animation: scaleIn 250ms var(--ease-out) both;
     }
     .announcement-detail-header {
       display: flex;
@@ -1413,7 +1422,7 @@
       <div class="announcement-detail-box">
         <div class="announcement-detail-header">
           <h3>${Utils.escapeHtml(ann.title)}</h3>
-          <button class="btn-icon" onclick="this.closest('.announcement-detail-overlay').remove()">
+          <button class="btn-icon" onclick="closeAnnouncementDetail(this)">
             <i data-lucide="x" style="width:18px;height:18px;"></i>
           </button>
         </div>
@@ -1421,9 +1430,15 @@
         <div class="announcement-detail-time">发布时间：${Utils.formatTime(ann.updateTime || ann.createTime)}</div>
       </div>
     `;
-    overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) closeAnnouncementDetail(overlay); });
     document.body.appendChild(overlay);
     lucide.createIcons();
+  }
+  function closeAnnouncementDetail(el) {
+    const overlay = el.closest('.announcement-detail-overlay');
+    if (!overlay) return;
+    overlay.classList.add('closing');
+    overlay.addEventListener('animationend', () => overlay.remove(), { once: true });
   }
 
   // 加载群列表

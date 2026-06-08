@@ -209,8 +209,6 @@
 .chat-history-modal.closing .chat-history-modal-content{animation:scaleOut 200ms var(--ease-out) forwards}
 .admin-modal-overlay.closing{animation:fadeOut 200ms var(--ease-out) forwards;pointer-events:none}
 .admin-modal-overlay.closing .admin-modal{animation:scaleOut 200ms var(--ease-out) forwards}
-.image-preview-modal.closing{animation:fadeOut 200ms var(--ease-out) forwards;pointer-events:none}
-.image-preview-modal.closing .image-preview-container{animation:scaleOut 200ms var(--ease-out) forwards}
 
 .sensitive-result{margin-top:var(--space-3);padding:var(--space-3);border-radius:var(--radius-md);font-size:var(--text-sm);line-height:1.6}
 .sensitive-result.found{background:rgba(239,68,68,0.05);color:var(--color-danger)}
@@ -392,7 +390,13 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  animation: fadeIn 200ms var(--ease-out) both;
 }
+.image-preview-modal.active .image-preview-container {
+  animation: scaleIn 250ms var(--ease-out) both;
+}
+.image-preview-modal.closing{display:flex;align-items:center;justify-content:center;animation:fadeOut 200ms var(--ease-out) forwards;pointer-events:none}
+.image-preview-modal.closing .image-preview-container{animation:scaleOut 200ms var(--ease-out) forwards}
 
 .image-preview-overlay {
   position: absolute;

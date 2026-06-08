@@ -643,6 +643,10 @@ const GroupManager = {
         modal.classList.add('active');
         document.body.style.overflow = 'hidden';
         this.updateImageTransform();
+
+        // ESC 关闭
+        this._escHandler = (e) => { if (e.key === 'Escape') this.closeImagePreview(); };
+        document.addEventListener('keydown', this._escHandler);
     },
 
     /**
@@ -651,10 +655,15 @@ const GroupManager = {
     closeImagePreview() {
         const modal = document.getElementById('imagePreviewModal');
         if (modal) {
+            modal.classList.remove('active');
             Utils.closeModalAnimated(modal, () => {
-                modal.classList.remove('active', 'closing');
+                modal.classList.remove('closing');
                 document.body.style.overflow = '';
             });
+        }
+        if (this._escHandler) {
+            document.removeEventListener('keydown', this._escHandler);
+            this._escHandler = null;
         }
     },
 

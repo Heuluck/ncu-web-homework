@@ -175,7 +175,10 @@ const AdminApp = {
           <tr>
             <td>
               <div class="user-cell">
-                <img class="avatar avatar-sm" src="${Utils.getAvatarUrl(g.avatar, g.name)}" alt="" onerror="this.src='${Utils.getAvatarUrl(null, 'group')}'">
+                ${g.avatar
+                  ? `<img class="avatar avatar-sm" src="${Utils.escapeHtml(g.avatar)}" alt="">`
+                  : `<div class="avatar avatar-sm" style="background:var(--color-primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;">${Utils.escapeHtml((g.name || '?')[0])}</div>`
+                }
                 <div class="user-info">
                   <span class="user-nick">${Utils.escapeHtml(g.name)}</span>
                   <span class="user-name">ID: ${g.id}</span>

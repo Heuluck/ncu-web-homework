@@ -22,8 +22,10 @@ const GroupSettingsModal = {
         document.body.appendChild(modal);
         lucide.createIcons();
 
-        // 遮罩点击关闭
-        modal.addEventListener('click', (e) => { if (e.target === modal) Utils.closeModalAnimated(modal); });
+        // 遮罩点击关闭（mousedown 追踪防止拖拽误关闭）
+        let _mdOnOverlay = false;
+        modal.addEventListener('mousedown', (e) => { _mdOnOverlay = e.target === modal; });
+        modal.addEventListener('click', (e) => { if (e.target === modal && _mdOnOverlay) Utils.closeModalAnimated(modal); });
 
         const closeModal = () => Utils.closeModalAnimated(modal);
         modal.querySelector('.modal-close').addEventListener('click', closeModal);

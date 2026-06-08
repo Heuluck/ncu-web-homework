@@ -171,7 +171,9 @@ const FriendManager = {
                 </div>
             </div>`;
         document.body.appendChild(overlay);
-        overlay.addEventListener('click', (e) => { if (e.target === overlay) this.closeSearchModal(); });
+        let _mdOnOverlay = false;
+        overlay.addEventListener('mousedown', (e) => { _mdOnOverlay = e.target === overlay; });
+        overlay.addEventListener('click', (e) => { if (e.target === overlay && _mdOnOverlay) this.closeSearchModal(); });
         lucide.createIcons();
         setTimeout(() => document.getElementById('searchKeyword')?.focus(), 100);
     },
@@ -302,7 +304,9 @@ const FriendManager = {
                 </div>
             </div>`;
         document.body.appendChild(overlay);
-        overlay.addEventListener('click', (e) => { if (e.target === overlay) this.closeRequestsModal(); });
+        let _mdOnOverlay = false;
+        overlay.addEventListener('mousedown', (e) => { _mdOnOverlay = e.target === overlay; });
+        overlay.addEventListener('click', (e) => { if (e.target === overlay && _mdOnOverlay) this.closeRequestsModal(); });
         // 存储数据以便 tab 切换
         overlay._received = received;
         overlay._sent = sent;
@@ -597,7 +601,9 @@ const FriendManager = {
                 </div>
             </div>`;
         document.body.appendChild(overlay);
-        overlay.addEventListener('click', (e) => { if (e.target === overlay) this.closeMoveFriendModal(); });
+        let _mdOnOverlay = false;
+        overlay.addEventListener('mousedown', (e) => { _mdOnOverlay = e.target === overlay; });
+        overlay.addEventListener('click', (e) => { if (e.target === overlay && _mdOnOverlay) this.closeMoveFriendModal(); });
         lucide.createIcons();
     },
 
@@ -665,7 +671,9 @@ const FriendManager = {
                 </div>` : ''}
             </div>`;
         document.body.appendChild(overlay);
-        overlay.addEventListener('click', (e) => { if (e.target === overlay) this.closeProfileModal(); });
+        let _mdOnOverlay = false;
+        overlay.addEventListener('mousedown', (e) => { _mdOnOverlay = e.target === overlay; });
+        overlay.addEventListener('click', (e) => { if (e.target === overlay && _mdOnOverlay) this.closeProfileModal(); });
         lucide.createIcons();
     },
 
@@ -699,7 +707,9 @@ const FriendManager = {
                 </div>
             </div>`;
         document.body.appendChild(overlay);
-        overlay.addEventListener('click', (e) => { if (e.target === overlay) this.closeGroupManageModal(); });
+        let _mdOnOverlay = false;
+        overlay.addEventListener('mousedown', (e) => { _mdOnOverlay = e.target === overlay; });
+        overlay.addEventListener('click', (e) => { if (e.target === overlay && _mdOnOverlay) this.closeGroupManageModal(); });
         lucide.createIcons();
     },
 

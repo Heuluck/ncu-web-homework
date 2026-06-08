@@ -431,7 +431,9 @@ const BotModal = {
     // ==================== 公共方法 ====================
 
     _bindCommon(modal) {
-        modal.addEventListener('click', (e) => { if (e.target === modal) Utils.closeModalAnimated(modal); });
+        let _mdOnOverlay = false;
+        modal.addEventListener('mousedown', (e) => { _mdOnOverlay = e.target === modal; });
+        modal.addEventListener('click', (e) => { if (e.target === modal && _mdOnOverlay) Utils.closeModalAnimated(modal); });
         modal.querySelector('.modal-close').addEventListener('click', () => Utils.closeModalAnimated(modal));
     },
 

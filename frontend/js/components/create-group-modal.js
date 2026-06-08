@@ -159,7 +159,9 @@ const CreateGroupModal = {
         const closeModal = () => Utils.closeModalAnimated(modal);
         modal.querySelector('.modal-close').addEventListener('click', closeModal);
         document.getElementById('cancelCreateBtn').addEventListener('click', closeModal);
-        modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+        let _mdOnOverlay = false;
+        modal.addEventListener('mousedown', (e) => { _mdOnOverlay = e.target === modal; });
+        modal.addEventListener('click', (e) => { if (e.target === modal && _mdOnOverlay) closeModal(); });
 
         document.getElementById('confirmCreateBtn').addEventListener('click', async () => {
             const name = document.getElementById('groupName').value.trim();

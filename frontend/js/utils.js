@@ -144,7 +144,8 @@ const Utils = {
       </div>`;
       const close = () => { overlay.remove(); resolve(); };
       overlay.querySelector('.alert-ok-btn').addEventListener('click', close);
-      overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+      overlay.addEventListener('mousedown', e => { overlay._mdOnOverlay = e.target === overlay; });
+      overlay.addEventListener('click', e => { if (e.target === overlay && overlay._mdOnOverlay) close(); });
       const onKey = e => { if (e.key === 'Enter' || e.key === 'Escape') { e.preventDefault(); close(); document.removeEventListener('keydown', onKey); } };
       document.addEventListener('keydown', onKey);
       document.body.appendChild(overlay);

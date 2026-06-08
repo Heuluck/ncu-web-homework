@@ -51,8 +51,10 @@ const GroupMemberPanel = {
             }
         });
 
-        // 遮罩点击关闭
-        modal.addEventListener('click', (e) => { if (e.target === modal) this.close(); });
+        // 遮罩点击关闭（mousedown 追踪防止拖拽误关闭）
+        let _mdOnOverlay = false;
+        modal.addEventListener('mousedown', (e) => { _mdOnOverlay = e.target === modal; });
+        modal.addEventListener('click', (e) => { if (e.target === modal && _mdOnOverlay) this.close(); });
         modal.querySelector('.modal-close').addEventListener('click', () => this.close());
 
         // 邀请成员按钮：先关成员面板，再开邀请面板
